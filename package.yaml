@@ -1,0 +1,14 @@
+name: datetimes
+version: '0.1.0.0'
+author: Stephen Diehl
+license: MIT
+dependencies:
+- base ==4.9.*
+- protolude ==0.1.*
+library:
+  source-dirs: src
+  ghc-options:
+    -fwarn-unused-imports
+    -fwarn-incomplete-patterns
+  exposed-modules:
+  - Main
