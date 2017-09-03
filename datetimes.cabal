@@ -16,8 +16,12 @@ library
   build-depends:
       base ==4.9.*
     , protolude ==0.1.*
+    , hourglass
+    , aeson
+    , cereal
   exposed-modules:
       Main
+      Holiday
   other-modules:
       Paths_datetimes
   default-language: Haskell2010

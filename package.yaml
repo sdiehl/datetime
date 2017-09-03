@@ -5,7 +5,9 @@ license: MIT
 dependencies:
 - base ==4.9.*
 - protolude ==0.1.*
-- hourglass -any
+- hourglass
+- aeson
+- cereal
 library:
   source-dirs: src
   ghc-options:
@@ -13,3 +15,4 @@ library:
     -fwarn-incomplete-patterns
   exposed-modules:
   - Main
+  - Holiday
