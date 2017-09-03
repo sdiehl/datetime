@@ -51,16 +51,17 @@ observedShift obs dt = case obs of
     _        -> dt
 
   Previous_friday -> case getWeekDay dt of
-    Saturday   -> dt { dateDay = day - 1 } --
-    Sunday     -> dt { dateDay = day - 2 }
+    Saturday   -> dt { dateDay = day - 1 } -- previous friday
+    Sunday     -> dt { dateDay = day - 2 } -- previous friday
     _        -> dt
 
   Next_monday -> case getWeekDay dt of
-    Saturday   -> dt { dateDay = day + 2 }
-    Sunday     -> dt { dateDay = day + 1 }
+    Saturday   -> dt { dateDay = day + 2 } -- next monday
+    Sunday     -> dt { dateDay = day + 1 } -- next monday
     _        -> dt
 
   None            -> dt
+
   where
     day = dateDay dt
 

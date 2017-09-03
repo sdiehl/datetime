@@ -15,4 +15,5 @@ library:
     -fwarn-incomplete-patterns
   exposed-modules:
   - Main
+  - Types
   - Holiday

@@ -21,6 +21,7 @@ library
     , cereal
   exposed-modules:
       Main
+      Types
       Holiday
   other-modules:
       Paths_datetimes
