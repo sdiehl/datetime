@@ -5,6 +5,7 @@ license: MIT
 dependencies:
 - base ==4.9.*
 - protolude ==0.1.*
+- hourglass -any
 library:
   source-dirs: src
   ghc-options:
