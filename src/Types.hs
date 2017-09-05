@@ -3,13 +3,31 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Types (
+  Datetime,
   days,
   months,
   years,
   weeks,
+
+  add,
+  sub,
+  diff,
+  within,
+
+  isWeekend,
+  isWeekday,
+  isBusiness,
 ) where
 
 import Data.Hourglass
+
+import Data.Aeson
+import Data.Serialize
+
+-------------------------------------------------------------------------------
+-- Types
+-------------------------------------------------------------------------------
+
 
 data Datetime = Datetime
   { year     :: Int -- the complete year
@@ -22,6 +40,17 @@ data Datetime = Datetime
   , week_day :: Int -- the number of days since sunday, between 0 and 6
   } deriving (Show)
 
+instance ToJSON Datetime where
+  toJSON = undefined -- XXX
+
+instance Serialize Datetime where
+  put = undefined -- XXX
+  get = undefined -- XXX
+
+-------------------------------------------------------------------------------
+-- Deltas and Intervals
+-------------------------------------------------------------------------------
+
 data Delta = Delta
   { dPeriod   :: Period
   , dDuration :: Duration
@@ -31,6 +60,7 @@ data Interval = Interval
   { istart :: Datetime
   , iStop  :: Datetime
   }
+
 
 convert :: DateTime -> Datetime
 convert dt = Datetime {
@@ -59,8 +89,40 @@ weeks n = days (7*n)
 fortnights :: Int -> Period
 fortnights n = weeks (2*n)
 
+-------------------------------------------------------------------------------
+-- Calendar Arithmetic
+-------------------------------------------------------------------------------
+
+-- | Ad a period to a date
+add :: Date -> Period -> Date
+add = undefined  -- XXX
+
+-- | Subtract a period from a date
+sub :: Date -> Delta -> Date
+sub = undefined  -- XXX
+
+-- | Get the difference between two dates
+diff :: Date -> Date -> Delta
+diff = undefined -- XXX
+
+-- | Check whether a date lies within an interval
+within :: Date -> Interval -> Bool
+within = undefined -- XXX
+
+-- | Get the difference (in days) between two dates
+daysBetween :: Date -> Date -> Delta
+daysBetween = undefined -- XXX
+
+-- | Get the date of the last day in a month
+eomonth :: Month -> Date
+eomonth = undefined -- XXX
+
+-------------------------------------------------------------------------------
+-- Queries
+-------------------------------------------------------------------------------
+
 isHoliday :: Date -> Bool
-isHoliday _ = False
+isHoliday _ = False -- XXX
 
 isWeekday :: Date -> Bool
 isWeekday dt = go (getWeekDay dt)
