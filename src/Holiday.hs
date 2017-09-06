@@ -1,9 +1,20 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Holiday (
+
+  isWeekend,
+  isWeekday,
+  isBusiness,
+
   ukHolidays,
   nyseHolidays,
+
 ) where
 
+import Data.Either (partitionEithers)
 import Data.Hourglass
+
+import Holiday.Types
 
 data HolidaySet
   = UnitedKingdom [Holiday]
@@ -45,7 +56,13 @@ data Holiday
   | Rule HolidayRule
   deriving (Show)
 
--- XXX: use days() function to do arithmetic
+partitionHolidays :: [Holiday] -> ([FixedHoliday],[HolidayRule])
+partitionHolidays = partitionEithers . map partition'
+  where
+    partition' (Fixed fixed) = Left fixed
+    partition' (Rule rule) = Right rule
+
+-- XXX: use days() function to do arithmetic & replace with Datetime
 observedShift :: Observance -> Date -> Date
 observedShift obs dt = case obs of
 
@@ -80,25 +97,76 @@ observedShift obs dt = case obs of
     day = dateDay dt
 
 -------------------------------------------------------------------------------
+-- Queries
+-------------------------------------------------------------------------------
+
+isHoliday :: Datetime -> Bool
+isHoliday dt = isUKHoliday dt || isNYSEHoliday dt
+
+-- | XXX Add FixedHoliday (|| any $ matchFixedHoliday ..)
+isUKHoliday :: Datetime -> Bool
+isUKHoliday dt =
+    any (matchHolidayRule dt) ruleHolidays
+  where
+    (UnitedKingdom holidays) = ukHolidays
+    (fixedHolidays, ruleHolidays) = partitionHolidays holidays
+
+-- | XXX Add FixedHoliday (|| any $ matchFixedHoliday ..)
+isNYSEHoliday :: Datetime -> Bool
+isNYSEHoliday dt =
+    any (matchHolidayRule dt) ruleHolidays
+  where
+    (NYSE holidays) = nyseHolidays
+    (fixedHolidays, ruleHolidays) = partitionHolidays holidays
+
+-- | A Datetime matches the Holiday rule iff:
+-- 1) the weekday of the datetime is the same as in the holiday rule
+-- 2) the month of the datetime is the same as in the holiday rule
+-- 3) the day `wkNum - 1` weeks ago is within the same month as the holiday rule
+matchHolidayRule :: Datetime -> HolidayRule -> Bool
+matchHolidayRule dt' (HolidayRule month wkNum wkDay)
+  | getWeekDay dt /= wkDay = False
+  | dateMonth dt /= month  = False
+  | otherwise =
+      let dT = datetimeToDateTime (sub dt' $ weeks (wkNum - 1))
+      in dateMonth (dtDate dT) == month
+  where
+    dt = dtDate $ datetimeToDateTime dt'
+
+isWeekday :: Datetime -> Bool
+isWeekday = go . getWeekDay . dtDate . datetimeToDateTime
+  where
+    go = \case
+      Saturday -> False
+      Sunday   -> False
+      _        -> True
+
+isWeekend :: Datetime -> Bool
+isWeekend = not . isWeekday
+
+isBusiness :: Datetime -> Bool
+isBusiness dt = not (isHoliday dt) && not (isWeekend dt)
+
+-------------------------------------------------------------------------------
 -- United Kingdom
 -------------------------------------------------------------------------------
 
-ukHolidays :: [Holiday]
-ukHolidays = []
+ukHolidays :: HolidaySet
+ukHolidays = UnitedKingdom [boxingDay]
 
 lonTz :: TimezoneOffset
 lonTz = TimezoneOffset 0
 
-boxingDay    = FixedHoliday 26 December Nearest_workday lonTz
-goodFriday   = Rule
-easterMonday = Rule
+boxingDay    = Fixed $ FixedHoliday 26 December Nearest_workday lonTz
+-- goodFriday   = Rule (
+-- easterMonday = Rule
 
 -------------------------------------------------------------------------------
 -- United States ( NYSE )
 -------------------------------------------------------------------------------
 
-nyseHolidays :: [Holiday]
-nyseHolidays = [
+nyseHolidays :: HolidaySet
+nyseHolidays = NYSE [
     christmasDay
   , independenceDay
   , memorialDay

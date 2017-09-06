@@ -1,6 +1,6 @@
 module Main where
 
-import Types
+import Holiday.Types
 --import Holiday
 
 import Data.Monoid
@@ -17,13 +17,13 @@ nowTz = timezoneCurrent
 nowDate :: IO DateTime
 nowDate = dateCurrent
 
-composite :: Period
+composite :: Delta
 composite = days 3 <> months 4 <> years 1
 
 example :: IO Date
 example = do
   dt <- nowDate
-  pure (dateAddPeriod (dtDate dt) composite)
+  pure (dateAddPeriod (dtDate dt) $ dPeriod composite)
 
 main :: IO ()
 main = return ()

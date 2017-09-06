@@ -3,21 +3,28 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Types (
+module Holiday.Types (
   Datetime,
+  Delta,
+  dPeriod,
+  dDuration,
+
+  secs,
+  mins,
+  hours,
+
   days,
   months,
   years,
   weeks,
 
+  dateTimeToDatetime,
+  datetimeToDateTime,
+
   add,
   sub,
   diff,
   within,
-
-  isWeekend,
-  isWeekday,
-  isBusiness,
 ) where
 
 import Data.Hourglass
@@ -54,6 +61,11 @@ data Delta = Delta
   , dDuration :: Duration -- ^ An amount of time measured in hours/mins/secs/nsecs
   } deriving (Show)
 
+instance Monoid Delta where
+  mempty = Delta mempty mempty
+  mappend (Delta p1 d1) (Delta p2 d2) =
+    Delta (p1 `mappend` p2) (d1 `mappend` d2)
+
 -- | A time period between two Datetimes
 data Interval = Interval
   { iStart :: Datetime
@@ -65,8 +77,8 @@ data Interval = Interval
 --
 -- This should be the only way to construct a Datetime value, given the use of
 -- the partial toEnum function in the Datetime -> DateTime conversion functions
-convert :: DateTime -> Datetime
-convert dt = Datetime {
+dateTimeToDatetime :: DateTime -> Datetime
+dateTimeToDatetime dt = Datetime {
     year     = dateYear (dtDate dt)
   , month    = fromEnum (dateMonth (dtDate dt))
   , day      = dateDay (dtDate dt)
@@ -78,8 +90,8 @@ convert dt = Datetime {
   }
 
 -- | Conversion function between Datetime and Data.Hourglass.DateTime
-convert' :: Datetime -> DateTime
-convert' dt = DateTime {
+datetimeToDateTime :: Datetime -> DateTime
+datetimeToDateTime dt = DateTime {
       dtDate = dtDate'
     , dtTime = dtTime'
     }
@@ -97,19 +109,38 @@ convert' dt = DateTime {
       , todNSec = 0
       }
 
-days :: Int -> Period
-days n = Period { periodYears = 0, periodMonths = 0, periodDays = n }
+-------------------------------------------------------------------------------
+-- Delta combinators
+-------------------------------------------------------------------------------
 
-months :: Int -> Period
-months n = Period { periodYears = 0, periodMonths = n, periodDays = 0 }
+-- | Trimmed to 0 - 59
+secs :: Int -> Delta
+secs n = Delta mempty $ Duration 0 0 (fromIntegral $ minMax 0 59 n) 0
 
-years :: Int -> Period
-years n = Period { periodYears = n, periodMonths = 0, periodDays = 0 }
+-- | Trimmed to 0 - 59
+mins :: Int -> Delta
+mins n = Delta mempty $ Duration 0 (fromIntegral $ minMax 0 59 n) 0 0
 
-weeks :: Int -> Period
+-- | Trimmed to 0 - 23
+hours :: Int -> Delta
+hours n = Delta mempty $ Duration (fromIntegral $ minMax 0 23 n) 0 0 0
+
+days :: Int -> Delta
+days n = flip Delta mempty
+  Period { periodYears = 0, periodMonths = 0, periodDays = n }
+
+months :: Int -> Delta
+months n = flip Delta mempty
+  Period { periodYears = 0, periodMonths = n, periodDays = 0 }
+
+years :: Int -> Delta
+years n = flip Delta mempty
+  Period { periodYears = n, periodMonths = 0, periodDays = 0 }
+
+weeks :: Int -> Delta
 weeks n = days (7*n)
 
-fortnights :: Int -> Period
+fortnights :: Int -> Delta
 fortnights n = weeks (2*n)
 
 -------------------------------------------------------------------------------
@@ -119,10 +150,10 @@ fortnights n = weeks (2*n)
 -- | Add a delta to a date
 add :: Datetime -> Delta -> Datetime
 add dt (Delta period duration) =
-    convert $ DateTime (dateAddPeriod d period) tod
+    dateTimeToDatetime $ DateTime (dateAddPeriod d period) tod
   where
     -- Data.Hourglass.DateTime with duration added
-    dt'@(DateTime d tod) = timeAdd (convert' dt) duration
+    dt'@(DateTime d tod) = timeAdd (datetimeToDateTime dt) duration
 
 -- | Subtract a delta from a date (Delta should be positive)
 sub :: Datetime -> Delta -> Datetime
@@ -133,7 +164,7 @@ sub dt (Delta period duration) =
 diff :: Datetime -> Datetime -> Delta
 diff d1' d2' = Delta period duration
   where
-    (d1, d2) = convertAndOrderDateTime d1' d2'
+    (d1, d2) = dateTimeToDatetimeAndOrderDateTime d1' d2'
 
     period = buildPeriodDiff d1 mempty
     d1PlusPeriod = dateTimeAddPeriod d1 period
@@ -147,9 +178,9 @@ diff d1' d2' = Delta period duration
       | dtpDys <= d2 = buildPeriodDiff dt pDys
       | otherwise    = p
       where
-        pYrs = p <> years 1
-        pMos = p <> months 1
-        pDys = p <> days 1
+        pYrs = p <> dPeriod (years 1)
+        pMos = p <> dPeriod (months 1)
+        pDys = p <> dPeriod (days 1)
         [dtpYrs, dtpMos, dtpDys] = flip map [pYrs,pMos,pDys] $ dateTimeAddPeriod dt
 
     -- Build the duration part of the delta
@@ -170,22 +201,22 @@ within :: Datetime -> Interval -> Bool
 within dt (Interval start stop) =
     startDate <= origDate && origDate <= endDate
   where
-    origDate  = convert' dt
-    startDate = convert' start
-    endDate   = convert' stop
+    origDate  = datetimeToDateTime dt
+    startDate = datetimeToDateTime start
+    endDate   = datetimeToDateTime stop
 
 -- | Get the difference (in days) between two dates
 daysBetween :: Datetime -> Datetime -> Delta
 daysBetween d1' d2' =
     Delta (Period 0 0 durDays) mempty
   where
-    (d1,d2)  = convertAndOrderDateTime d1' d2'
+    (d1,d2)  = dateTimeToDatetimeAndOrderDateTime d1' d2'
     duration = fst $ fromSeconds $ timeDiff d1 d2
     durDays  = let (Hours hrs) = durationHours duration in fromIntegral hrs `div` 24
 
 -- | Get the date of the first day in a month of a given year
 fomonth :: Int -> Month -> Datetime
-fomonth y m = convert $ DateTime (Date y m 1) (TimeOfDay 0 0 0 0)
+fomonth y m = dateTimeToDatetime $ DateTime (Date y m 1) (TimeOfDay 0 0 0 0)
 
 -- | Get the date of the last day in a month of a given year
 eomonth :: Int -> Month -> Datetime
@@ -195,28 +226,7 @@ eomonth y m = sub foNextMonth $ Delta (Period 0 0 1) mempty
       | fromEnum m == 11 = January
       | otherwise = toEnum $ fromEnum m + 1
 
-    foNextMonth = convert $ DateTime (Date y nextMonth 1) (TimeOfDay 0 0 0 0)
-
--------------------------------------------------------------------------------
--- Queries
--------------------------------------------------------------------------------
-
-isHoliday :: Date -> Bool
-isHoliday _ = False -- XXX
-
-isWeekday :: Date -> Bool
-isWeekday dt = go (getWeekDay dt)
-  where
-    go = \case
-      Saturday -> False
-      Sunday   -> False
-      _        -> True
-
-isWeekend :: Date -> Bool
-isWeekend = not . isWeekday
-
-isBusiness :: Date -> Bool
-isBusiness dt = not (isHoliday dt) && not (isWeekend dt)
+    foNextMonth = dateTimeToDatetime $ DateTime (Date y nextMonth 1) (TimeOfDay 0 0 0 0)
 
 -------------------------------------------------------------------------------
 -- Helpers
@@ -232,10 +242,13 @@ dateTimeAddPeriod :: DateTime -> Period -> DateTime
 dateTimeAddPeriod (DateTime ddate dtime) p =
   DateTime (dateAddPeriod ddate p) dtime
 
-convertAndOrderDateTime :: Datetime -> Datetime -> (DateTime, DateTime)
-convertAndOrderDateTime d1' d2'
+dateTimeToDatetimeAndOrderDateTime :: Datetime -> Datetime -> (DateTime, DateTime)
+dateTimeToDatetimeAndOrderDateTime d1' d2'
   | d1 <= d2  = (d1,d2)
   | otherwise = (d2,d1)
   where
-    d1 = convert' d1'
-    d2 = convert' d2'
+    d1 = datetimeToDateTime d1'
+    d2 = datetimeToDateTime d2'
+
+minMax :: Ord a => a -> a -> a -> a
+minMax mini maxi = max maxi . min mini
