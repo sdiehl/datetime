@@ -1,6 +1,7 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Types (
   Datetime,
@@ -22,6 +23,8 @@ module Types (
 import Data.Hourglass
 
 import Data.Aeson
+import GHC.Generics (Generic)
+import Data.Monoid ((<>))
 import Data.Serialize
 
 -------------------------------------------------------------------------------
@@ -38,14 +41,7 @@ data Datetime = Datetime
   , second   :: Int -- the number of seconds since the begining of the minute, between 0 and 59
   , zone     :: Int -- the local zone offset, in minutes of advance wrt UTC.
   , week_day :: Int -- the number of days since sunday, between 0 and 6
-  } deriving (Show)
-
-instance ToJSON Datetime where
-  toJSON = undefined -- XXX
-
-instance Serialize Datetime where
-  put = undefined -- XXX
-  get = undefined -- XXX
+  } deriving (Show, Generic, ToJSON, FromJSON, Serialize)
 
 -------------------------------------------------------------------------------
 -- Deltas and Intervals
@@ -151,9 +147,9 @@ diff d1' d2' = Delta period duration
       | dtpDys <= d2 = buildPeriodDiff dt pDys
       | otherwise    = p
       where
-        pYrs = p { periodYears = periodYears p + 1 }
-        pMos = p { periodMonths = periodMonths p + 1 }
-        pDys = p { periodDays = periodDays p + 1 }
+        pYrs = p <> years 1
+        pMos = p <> months 1
+        pDys = p <> days 1
         [dtpYrs, dtpMos, dtpDys] = flip map [pYrs,pMos,pDys] $ dateTimeAddPeriod dt
 
     -- Build the duration part of the delta
