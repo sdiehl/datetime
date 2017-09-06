@@ -51,11 +51,12 @@ instance Serialize Datetime where
 -- Deltas and Intervals
 -------------------------------------------------------------------------------
 
--- | A time difference represented with y/m/d + h/m/s/ns
+-- | A time difference represented with Period (y/m/d) + Duration (h/m/s/ns)
+-- where Duration represents the time diff < 24 hours.
 data Delta = Delta
   { dPeriod   :: Period   -- ^ An amount of conceptual calendar time in terms of years, months and days.
   , dDuration :: Duration -- ^ An amount of time measured in hours/mins/secs/nsecs
-  }
+  } deriving (Show)
 
 -- | A time period between two Datetimes
 data Interval = Interval
@@ -132,11 +133,41 @@ sub :: Datetime -> Delta -> Datetime
 sub dt (Delta period duration) =
   add dt $ Delta (negatePeriod period) (negateDuration duration)
 
--- | Get the difference between two dates
+-- | Get the difference between two dates (always positive (?))
 diff :: Datetime -> Datetime -> Delta
-diff d1 d2 = undefined
+diff d1' d2' = Delta period duration
   where
-    diffSecs = timeDiff (convert' d1) (convert' d2)
+    (d1, d2) = convertAndOrderDateTime d1' d2'
+
+    period = buildPeriodDiff d1 mempty
+    d1PlusPeriod = dateTimeAddPeriod d1 period
+    duration = buildDurDiff d1PlusPeriod mempty
+
+    -- Build the period part of the Delta
+    buildPeriodDiff :: DateTime -> Period -> Period
+    buildPeriodDiff dt p
+      | dtpYrs <= d2 = buildPeriodDiff dt pYrs
+      | dtpMos <= d2 = buildPeriodDiff dt pMos
+      | dtpDys <= d2 = buildPeriodDiff dt pDys
+      | otherwise    = p
+      where
+        pYrs = p { periodYears = periodYears p + 1 }
+        pMos = p { periodMonths = periodMonths p + 1 }
+        pDys = p { periodDays = periodDays p + 1 }
+        [dtpYrs, dtpMos, dtpDys] = flip map [pYrs,pMos,pDys] $ dateTimeAddPeriod dt
+
+    -- Build the duration part of the delta
+    buildDurDiff :: DateTime -> Duration -> Duration
+    buildDurDiff dt d
+      | d1dHrs <= d2 = buildDurDiff dt dHrs
+      | d1dMns <= d2 = buildDurDiff dt dMns
+      | d1dScs <= d2 = buildDurDiff dt dScs
+      | otherwise    = d
+      where
+        dHrs = d { durationHours = durationHours d + 1 }
+        dMns = d { durationMinutes = durationMinutes d + 1 }
+        dScs = d { durationSeconds = durationSeconds d + 1 }
+        [d1dHrs, d1dMns, d1dScs] = map (timeAdd dt) [dHrs,dMns,dScs]
 
 -- | Check whether a date lies within an interval
 within :: Datetime -> Interval -> Bool
@@ -149,13 +180,10 @@ within dt (Interval start stop) =
 
 -- | Get the difference (in days) between two dates
 daysBetween :: Datetime -> Datetime -> Delta
-daysBetween d1'' d2'' =
+daysBetween d1' d2' =
     Delta (Period 0 0 durDays) mempty
   where
-    d1' = convert' d1''
-    d2' = convert' d2''
-
-    (d1,d2)  = if d1' <= d2' then (d1',d2') else (d2',d1')
+    (d1,d2)  = convertAndOrderDateTime d1' d2'
     duration = fst $ fromSeconds $ timeDiff d1 d2
     durDays  = let (Hours hrs) = durationHours duration in fromIntegral hrs `div` 24
 
@@ -203,3 +231,15 @@ negatePeriod (Period y m d) = Period (-y) (-m) (-d)
 
 negateDuration :: Duration -> Duration
 negateDuration (Duration h m s ns) = Duration (-h) (-m) (-s) (-ns)
+
+dateTimeAddPeriod :: DateTime -> Period -> DateTime
+dateTimeAddPeriod (DateTime ddate dtime) p =
+  DateTime (dateAddPeriod ddate p) dtime
+
+convertAndOrderDateTime :: Datetime -> Datetime -> (DateTime, DateTime)
+convertAndOrderDateTime d1' d2'
+  | d1 <= d2  = (d1,d2)
+  | otherwise = (d2,d1)
+  where
+    d1 = convert' d1'
+    d2 = convert' d2'

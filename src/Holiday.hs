@@ -1,6 +1,6 @@
 module Holiday (
-  isUKHoliday,
-  isNYSEHoliday,
+  ukHolidays,
+  nyseHolidays,
 ) where
 
 import Data.Hourglass
@@ -26,9 +26,23 @@ data FixedHoliday = FixedHoliday
   , timezone        :: TimezoneOffset
   } deriving (Show)
 
+-- | Specifies a recurrence rule for holidays that have a logical yearly
+-- recurrence date rather than a fixed date every year.
+data HolidayRule = HolidayRule
+  { monthOfYear :: Month
+  , weekOfMonth :: Int
+  , dayOfWeek   :: WeekDay
+  } deriving (Show)
+
+-- | Smart constructor for `HolidayRule`, trims weeks to max 52
+mkHolidayRule :: Month -> Int -> WeekDay -> HolidayRule
+mkHolidayRule month week' day = HolidayRule month week day
+  where
+    week = min 52 $ max 0 week'
+
 data Holiday
   = Fixed FixedHoliday
-  | Rule
+  | Rule HolidayRule
   deriving (Show)
 
 -- XXX: use days() function to do arithmetic
@@ -69,8 +83,8 @@ observedShift obs dt = case obs of
 -- United Kingdom
 -------------------------------------------------------------------------------
 
-isUKHoliday :: [Holiday]
-isUKHoliday = []
+ukHolidays :: [Holiday]
+ukHolidays = []
 
 lonTz :: TimezoneOffset
 lonTz = TimezoneOffset 0
@@ -83,8 +97,8 @@ easterMonday = Rule
 -- United States ( NYSE )
 -------------------------------------------------------------------------------
 
-isNYSEHoliday :: [Holiday]
-isNYSEHoliday = [
+nyseHolidays :: [Holiday]
+nyseHolidays = [
     christmasDay
   , independenceDay
   , memorialDay
@@ -101,6 +115,6 @@ christmasDay    = Fixed (FixedHoliday 25 December Nearest_workday nycTz)
 independenceDay = Fixed (FixedHoliday 4 July Nearest_workday nycTz)
 memorialDay     = Fixed (FixedHoliday 25 May None nycTz)
 newYearsDay     = Fixed (FixedHoliday 1 January None nycTz)
-laborDay        = Rule
-presidentsDay   = Rule
-thanksgivingDay = Rule
+laborDay        = Rule (mkHolidayRule September 1 Monday) -- first monday in september
+presidentsDay   = Rule (mkHolidayRule February 3 Monday)  -- third monday in February
+thanksgivingDay = Rule (mkHolidayRule November 4 Monday)  -- fourth thursday in November
