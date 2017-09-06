@@ -34,11 +34,11 @@ data HolidayRule = HolidayRule
   , dayOfWeek   :: WeekDay
   } deriving (Show)
 
--- | Smart constructor for `HolidayRule`, trims weeks to max 52
+-- | Smart constructor for `HolidayRule`, trims weeks to max 5, min 0
 mkHolidayRule :: Month -> Int -> WeekDay -> HolidayRule
 mkHolidayRule month week' day = HolidayRule month week day
   where
-    week = min 52 $ max 0 week'
+    week = min 5 $ max 0 week'
 
 data Holiday
   = Fixed FixedHoliday
