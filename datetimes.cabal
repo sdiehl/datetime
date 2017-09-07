@@ -4,10 +4,18 @@
 
 name:           datetimes
 version:        0.1.0.0
+category:       Development
+homepage:       https://github.com/adjoint-io/datetimes#readme
+bug-reports:    https://github.com/adjoint-io/datetimes/issues
 author:         Adjoint Inc
-license:        MIT
+maintainer:     Adjoint Inc (info@adjoint.io)
+license:        Apache
 build-type:     Simple
 cabal-version:  >= 1.10
+
+source-repository head
+  type: git
+  location: https://github.com/adjoint-io/datetimes
 
 library
   hs-source-dirs:

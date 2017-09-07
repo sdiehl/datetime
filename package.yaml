@@ -1,7 +1,10 @@
 name: datetimes
 version: '0.1.0.0'
 author: Adjoint Inc
-license: MIT
+maintainer: Adjoint Inc (info@adjoint.io)
+license: Apache
+github: adjoint-io/datetime
+category: Development
 dependencies:
 - base >= 4.7 && < 5
 - protolude >=0.2

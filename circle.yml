@@ -1,7 +1,6 @@
 dependencies:
   cache_directories:
     - "~/.stack"
-    - "/home/ubuntu/pedersen-commitment/.stack-work"
   pre:
     - wget https://github.com/commercialhaskell/stack/releases/download/v1.4.0/stack-1.4.0-linux-x86_64.tar.gz -O /tmp/stack.tar.gz
     - tar -zxvf /tmp/stack.tar.gz -C /tmp

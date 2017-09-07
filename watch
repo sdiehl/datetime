@@ -1,0 +1,1 @@
+ghcid --command="stack repl datetimes:lib --no-docker" 
