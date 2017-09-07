@@ -18,7 +18,6 @@ library:
     -fwarn-incomplete-patterns
     -fwarn-incomplete-uni-patterns
   exposed-modules:
-  - Main
   - Holiday
   - Holiday.Types
 

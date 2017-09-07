@@ -29,6 +29,8 @@ module Holiday.Types (
   sub,
   diff,
   within,
+
+  now,
 ) where
 
 import Data.Hourglass
@@ -38,6 +40,8 @@ import Data.Aeson
 import GHC.Generics (Generic)
 import Data.Monoid ((<>))
 import Data.Serialize
+
+import Time.System
 
 -------------------------------------------------------------------------------
 -- Types
@@ -292,3 +296,13 @@ dateTimeToDatetimeAndOrderDateTime d1' d2'
 
 minMax :: Ord a => a -> a -> a -> a
 minMax mini maxi = max maxi . min mini
+
+-------------------------------------------------------------------------------
+-- System Time
+-------------------------------------------------------------------------------
+
+now :: IO Datetime
+now = do
+  TimezoneOffset zone <- timezoneCurrent
+  dt <- dateTimeToDatetime <$> dateCurrent
+  pure (dt { zone = zone })
