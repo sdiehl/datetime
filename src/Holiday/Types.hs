@@ -254,6 +254,7 @@ within dt (Interval start stop) =
     endDate   = datetimeToDateTime stop
 
 -- | Get the difference (in days) between two dates
+-- XXX Does a `day` mean 24 hours, or whenever midnight is???
 daysBetween :: Datetime -> Datetime -> Delta
 daysBetween d1' d2' =
     Delta (Period 0 0 durDays) mempty

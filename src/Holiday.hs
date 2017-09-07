@@ -12,9 +12,12 @@ module Holiday (
   isBusiness,
 
   ukHolidays,
+  isUKHoliday,
   nyseHolidays,
+  isNYSEHoliday,
 ) where
 
+import Prelude hiding (show)
 import Protolude
 
 import Data.Hourglass
@@ -155,17 +158,24 @@ matchFixedHoliday dt (FixedHoliday fday fmonth obs tz) = and
 -- 2) the month of the datetime is the same as in the holiday rule
 -- 3) the day `wkNum - 1` weeks ago is within the same month as the holiday rule
 matchHolidayRule :: Datetime -> HolidayRule -> Bool
-matchHolidayRule dt (HolidayRule month wkNum wkDay) = and
+matchHolidayRule dt (HolidayRule month' wkNum wkDay) = and
     [ getWeekDay date       == wkDay -- 1)
-    , dateMonth date        == month -- 2)
-    , dateMonth (dtDate dT) == month -- 3)
+    , dateMonth date        == month' -- 2)
+    , countWeekDayOccs dt   == wkNum
     ]
   where
     date = dtDate $ datetimeToDateTime dt
-    dT = datetimeToDateTime (sub dt $ weeks (wkNum - 1))
+
+    countWeekDayOccs dt'
+      | fromEnum month' /= month dt' = 0
+      | otherwise = 1 + countWeekDayOccs (sub dt' $ weeks 1)
 
 matchEasterHoliday :: Datetime -> EasterHoliday -> Bool
-matchEasterHoliday dt (EasterHoliday datetime) = dt == datetime
+matchEasterHoliday dt (EasterHoliday datetime) =
+    dateTuple == easter
+  where
+    dateTuple = (year dt, month dt, day dt)
+    easter = (year datetime, month datetime, day datetime)
 
 isWeekday :: Datetime -> Bool
 isWeekday = go . getWeekDay . dtDate . datetimeToDateTime
