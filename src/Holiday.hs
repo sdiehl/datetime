@@ -1,6 +1,9 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Holiday (
+  HolidaySet(..),
+  HolidayRule(..),
+  Observance(..),
 
   isWeekend,
   isWeekday,
@@ -8,7 +11,6 @@ module Holiday (
 
   ukHolidays,
   nyseHolidays,
-
 ) where
 
 import Data.Either (partitionEithers)
@@ -22,12 +24,12 @@ data HolidaySet
   deriving (Show)
 
 data Observance
-  = Nearest_workday         -- move Saturday to Friday and Sunday to Monday
-  | Sunday_to_monday        -- move Sunday to following Monday
-  | Next_monday_or_tuesday  -- move Saturday to Monday and Sunday/Monday to Tuesday
-  | Previous_friday         -- move Saturday and Sunday to previous Friday
-  | Next_monday             -- move Saturday and Sunday to following Monday
-  | None                    -- always on a fixed date
+  = Nearest_workday         -- ^ Move Saturday to Friday and Sunday to Monday
+  | Sunday_to_monday        -- ^ Move Sunday to following Monday
+  | Next_monday_or_tuesday  -- ^ Move Saturday to Monday and Sunday/Monday to Tuesday
+  | Previous_friday         -- ^ Move Saturday and Sunday to previous Friday
+  | Next_monday             -- ^ Move Saturday and Sunday to following Monday
+  | None                    -- ^ Always on a fixed date
   deriving (Show)
 
 data FixedHoliday = FixedHoliday
@@ -151,6 +153,8 @@ isBusiness dt = not (isHoliday dt) && not (isWeekend dt)
 -- United Kingdom
 -------------------------------------------------------------------------------
 
+-- | United Kingdom Bank Holidays
+-- <https://www.gov.uk/bank-holidays>
 ukHolidays :: HolidaySet
 ukHolidays = UnitedKingdom [boxingDay]
 
@@ -165,6 +169,8 @@ boxingDay    = Fixed $ FixedHoliday 26 December Nearest_workday lonTz
 -- United States ( NYSE )
 -------------------------------------------------------------------------------
 
+-- | United States NYSE Stock Exchange Holidays
+-- <https://www.nyse.com/markets/hours-calendars>
 nyseHolidays :: HolidaySet
 nyseHolidays = NYSE [
     christmasDay

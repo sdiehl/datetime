@@ -4,7 +4,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
 module Holiday.Types (
-  Datetime,
+  Datetime(..),
   Delta,
   dPeriod,
   dDuration,
@@ -17,6 +17,9 @@ module Holiday.Types (
   months,
   years,
   weeks,
+
+  eomonth,
+  fomonth,
 
   dateTimeToDatetime,
   datetimeToDateTime,
@@ -40,14 +43,14 @@ import Data.Serialize
 
 
 data Datetime = Datetime
-  { year     :: Int -- the complete year
-  , month    :: Int -- a month, between 1 and 12
-  , day      :: Int -- a day, between 1 and 31
-  , hour     :: Int -- the number of hours since midnight, between 0 and 23
-  , minute   :: Int -- the number of minutes since the beginning of the hour, between 0 and 59
-  , second   :: Int -- the number of seconds since the begining of the minute, between 0 and 59
-  , zone     :: Int -- the local zone offset, in minutes of advance wrt UTC.
-  , week_day :: Int -- the number of days since sunday, between 0 and 6
+  { year     :: Int -- ^ The complete year
+  , month    :: Int -- ^ A month, between 1 and 12
+  , day      :: Int -- ^ A day, between 1 and 31
+  , hour     :: Int -- ^ The number of hours since midnight, between 0 and 23
+  , minute   :: Int -- ^ The number of minutes since the beginning of the hour, between 0 and 59
+  , second   :: Int -- ^ The number of seconds since the begining of the minute, between 0 and 59
+  , zone     :: Int -- ^ The local zone offset, in minutes of advance wrt UTC.
+  , week_day :: Int -- ^ The number of days since sunday, between 0 and 6
   } deriving (Show, Generic, ToJSON, FromJSON, Serialize)
 
 -------------------------------------------------------------------------------

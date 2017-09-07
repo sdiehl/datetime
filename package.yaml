@@ -1,13 +1,13 @@
 name: datetimes
 version: '0.1.0.0'
-author: Stephen Diehl
+author: Adjoint Inc
 license: MIT
 dependencies:
 - base ==4.9.*
-- protolude ==0.1.*
-- hourglass
-- aeson
-- cereal
+- protolude >=0.2
+- hourglass >=0.2
+- aeson >=1.2
+- cereal >=0.5
 library:
   source-dirs: src
   ghc-options:
