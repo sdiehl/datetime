@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Holiday.Types (
   Datetime(..),
@@ -32,6 +33,7 @@ module Holiday.Types (
 
 import Data.Hourglass
 
+import Data.Int
 import Data.Aeson
 import GHC.Generics (Generic)
 import Data.Monoid ((<>))
@@ -51,7 +53,42 @@ data Datetime = Datetime
   , second   :: Int -- ^ The number of seconds since the begining of the minute, between 0 and 59
   , zone     :: Int -- ^ The local zone offset, in minutes of advance wrt UTC.
   , week_day :: Int -- ^ The number of days since sunday, between 0 and 6
-  } deriving (Show, Generic, ToJSON, FromJSON, Serialize)
+  } deriving (Show, Generic, ToJSON, FromJSON)
+
+instance Serialize Datetime where
+  put Datetime {..} = do
+    putInt year
+    putInt month
+    putInt day
+    putInt hour
+    putInt minute
+    putInt second
+    putInt zone
+    putInt week_day
+    where
+      putInt :: Int -> PutM ()
+      putInt i = putInt64be (fromIntegral i :: Int64)
+
+  get = do
+    year     <- getInt
+    month    <- getInt
+    day      <- getInt
+    hour     <- getInt
+    minute   <- getInt
+    second   <- getInt
+    zone     <- getInt
+    week_day <- getInt
+    let dt = Datetime {..}
+    -- XXX: do validation logic here
+    case isValid dt of
+      Left err -> fail err
+      Right _  -> pure dt
+    where
+      getInt :: Get Int
+      getInt = fmap fromIntegral (get :: Get Int64)
+
+isValid :: Datetime -> Either [Char] ()
+isValid dt = Right ()
 
 -------------------------------------------------------------------------------
 -- Deltas and Intervals
