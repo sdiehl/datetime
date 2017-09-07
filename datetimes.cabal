@@ -27,6 +27,7 @@ library
     , hourglass >=0.2
     , aeson >=1.1
     , cereal >=0.5
+    , time >=1.6.0.1
   exposed-modules:
       Holiday
       Holiday.Types
@@ -45,6 +46,7 @@ test-suite matrix-test
     , hourglass >=0.2
     , aeson >=1.1
     , cereal >=0.5
+    , time >=1.6.0.1
     , base >= 4.7
     , protolude >= 0.2
     , QuickCheck

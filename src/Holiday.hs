@@ -15,8 +15,11 @@ module Holiday (
   nyseHolidays,
 ) where
 
-import Data.Either (partitionEithers)
+import Protolude
+
 import Data.Hourglass
+import Data.Time.Calendar (toGregorian)
+import Data.Time.Calendar.Easter (gregorianEaster)
 import qualified Time.Types
 
 import Holiday.Types
@@ -43,7 +46,8 @@ data FixedHoliday = FixedHoliday
   } deriving (Show)
 
 -- | Specifies a recurrence rule for holidays that have a logical yearly
--- recurrence date rather than a fixed date every year.
+-- recurrence date rather than a fixed date every year. YEAR recurrence
+-- is implicit, therefore no recurrence rule is specified.
 data HolidayRule = HolidayRule
   { monthOfYear :: Month
   , weekOfMonth :: Int
@@ -56,50 +60,58 @@ mkHolidayRule month week' day = HolidayRule month week day
   where
     week = min 5 $ max 0 week'
 
+data EasterHoliday = EasterHoliday Datetime
+  deriving (Show)
+
 data Holiday
   = Fixed FixedHoliday
   | Rule HolidayRule
+  | Easter EasterHoliday
   deriving (Show)
 
-partitionHolidays :: [Holiday] -> ([FixedHoliday],[HolidayRule])
-partitionHolidays = partitionEithers . map partition'
+partitionHolidays :: [Holiday] -> ([FixedHoliday],[HolidayRule],[EasterHoliday])
+partitionHolidays = foldl' partition' ([],[],[])
   where
-    partition' (Fixed fixed) = Left fixed
-    partition' (Rule rule) = Right rule
+    partition' (fs,rs,es) holiday =
+      case holiday of
+        Fixed fixed -> (fixed:fs,rs,es)
+        Rule rule   -> (fs,rule:rs,es)
+        Easter ehol -> (fs,rs,ehol:es)
 
--- XXX: use days() function to do arithmetic & replace with Datetime
-observedShift :: Observance -> Date -> Date
-observedShift obs dt = case obs of
 
-  Nearest_workday -> case getWeekDay dt of
-    Saturday -> dt { dateDay = day - 1 } -- prev friday
-    Sunday   -> dt { dateDay = day + 1 } -- next monday
-    _        -> dt
+observedShift :: Observance -> Datetime -> Datetime
+observedShift obs datetime = case obs of
 
-  Sunday_to_monday -> case getWeekDay dt of
-    Sunday   -> dt { dateDay = day + 1 } -- next monady
-    _        -> dt
+  Nearest_workday -> case getWeekDay date of
+    Saturday -> sub datetime (days 1) -- prev friday
+    Sunday   -> add datetime (days 1) -- next monday
+    _        -> datetime
 
-  Next_monday_or_tuesday -> case getWeekDay dt of
-    Saturday   -> dt { dateDay = day + 2 } -- next monday
-    Sunday     -> dt { dateDay = day + 2 } -- next tuesday
-    Monday     -> dt { dateDay = day + 1 } -- next tuesday
-    _        -> dt
+  Sunday_to_monday -> case getWeekDay date of
+    Sunday   -> add datetime (days 1) -- next monday
+    _        -> datetime
 
-  Previous_friday -> case getWeekDay dt of
-    Saturday   -> dt { dateDay = day - 1 } -- previous friday
-    Sunday     -> dt { dateDay = day - 2 } -- previous friday
-    _        -> dt
+  Next_monday_or_tuesday -> case getWeekDay date of
+    Saturday -> add datetime (days 2) -- next monday
+    Sunday   -> add datetime (days 2) -- next tuesday
+    Monday   -> add datetime (days 1) -- next tuesday
+    _        -> datetime
 
-  Next_monday -> case getWeekDay dt of
-    Saturday   -> dt { dateDay = day + 2 } -- next monday
-    Sunday     -> dt { dateDay = day + 1 } -- next monday
-    _        -> dt
+  Previous_friday -> case getWeekDay date of
+    Saturday -> sub datetime (days 1) -- previous friday
+    Sunday   -> sub datetime (days 2) -- previous friday
+    _        -> datetime
 
-  None            -> dt
+  Next_monday -> case getWeekDay date of
+    Saturday -> add datetime (days 2) -- next monday
+    Sunday   -> add datetime (days 1) -- next monday
+    _        -> datetime
+
+  None       -> datetime
 
   where
-    day = dateDay dt
+    dateTime = datetimeToDateTime datetime
+    date = dtDate dateTime
 
 -------------------------------------------------------------------------------
 -- Queries
@@ -108,35 +120,52 @@ observedShift obs dt = case obs of
 isHoliday :: Datetime -> Bool
 isHoliday dt = isUKHoliday dt || isNYSEHoliday dt
 
--- | XXX Add FixedHoliday (|| any $ matchFixedHoliday ..)
 isUKHoliday :: Datetime -> Bool
-isUKHoliday dt =
-    any (matchHolidayRule dt) ruleHolidays
+isUKHoliday dt = matchHolidays dt holidays
   where
-    (UnitedKingdom holidays) = ukHolidays
-    (fixedHolidays, ruleHolidays) = partitionHolidays holidays
+    holidays = ukHolidays (year dt)
 
--- | XXX Add FixedHoliday (|| any $ matchFixedHoliday ..)
 isNYSEHoliday :: Datetime -> Bool
-isNYSEHoliday dt =
-    any (matchHolidayRule dt) ruleHolidays
+isNYSEHoliday dt = matchHolidays dt holidays
   where
-    (NYSE holidays) = nyseHolidays
-    (fixedHolidays, ruleHolidays) = partitionHolidays holidays
+    holidays = nyseHolidays (year dt)
+
+matchHolidays :: Datetime -> [Holiday] -> Bool
+matchHolidays dt holidays = or
+    [ any (matchFixedHoliday dt) fixeds
+    , any (matchHolidayRule dt) rules
+    , any (matchEasterHoliday dt) easters
+    ]
+  where
+    (fixeds, rules, easters) = partitionHolidays holidays
+
+-- | A Datetime matches a fixed holiday if the day/month/year is equal to the
+-- day/month/year of the fixed holiday
+matchFixedHoliday :: Datetime -> FixedHoliday -> Bool
+matchFixedHoliday dt (FixedHoliday fday fmonth obs tz) = and
+  [ fromEnum fmonth == month shiftedDt
+  , fday          == day shiftedDt
+  -- XXX , match timezone here
+  ]
+  where
+    shiftedDt = observedShift obs dt
 
 -- | A Datetime matches the Holiday rule iff:
 -- 1) the weekday of the datetime is the same as in the holiday rule
 -- 2) the month of the datetime is the same as in the holiday rule
 -- 3) the day `wkNum - 1` weeks ago is within the same month as the holiday rule
 matchHolidayRule :: Datetime -> HolidayRule -> Bool
-matchHolidayRule dt' (HolidayRule month wkNum wkDay)
-  | getWeekDay dt /= wkDay = False
-  | dateMonth dt /= month  = False
-  | otherwise =
-      let dT = datetimeToDateTime (sub dt' $ weeks (wkNum - 1))
-      in dateMonth (dtDate dT) == month
+matchHolidayRule dt (HolidayRule month wkNum wkDay) = and
+    [ getWeekDay date       == wkDay -- 1)
+    , dateMonth date        == month -- 2)
+    , dateMonth (dtDate dT) == month -- 3)
+    ]
   where
-    dt = dtDate $ datetimeToDateTime dt'
+    date = dtDate $ datetimeToDateTime dt
+    dT = datetimeToDateTime (sub dt $ weeks (wkNum - 1))
+
+matchEasterHoliday :: Datetime -> EasterHoliday -> Bool
+matchEasterHoliday dt (EasterHoliday datetime) = dt == datetime
 
 isWeekday :: Datetime -> Bool
 isWeekday = go . getWeekDay . dtDate . datetimeToDateTime
@@ -158,15 +187,17 @@ isBusiness dt = not (isHoliday dt) && not (isWeekend dt)
 
 -- | United Kingdom Bank Holidays
 -- <https://www.gov.uk/bank-holidays>
-ukHolidays :: HolidaySet
-ukHolidays = UnitedKingdom [boxingDay]
+ukHolidays :: Int -> [Holiday]
+ukHolidays year =
+  [ boxingDay
+  , goodFriday year
+  , easterMonday year
+  ]
 
 lonTz :: TimezoneOffset
 lonTz = TimezoneOffset 0
 
-boxingDay    = Fixed $ FixedHoliday 26 December Nearest_workday lonTz
--- goodFriday   = Rule (
--- easterMonday = Rule
+boxingDay = Fixed $ FixedHoliday 26 December Nearest_workday lonTz
 
 -------------------------------------------------------------------------------
 -- United States ( NYSE )
@@ -174,15 +205,16 @@ boxingDay    = Fixed $ FixedHoliday 26 December Nearest_workday lonTz
 
 -- | United States NYSE Stock Exchange Holidays
 -- <https://www.nyse.com/markets/hours-calendars>
-nyseHolidays :: HolidaySet
-nyseHolidays = NYSE [
-    christmasDay
+nyseHolidays :: Int -> [Holiday]
+nyseHolidays year =
+  [ christmasDay
   , independenceDay
   , memorialDay
   , newYearsDay
   , laborDay
   , presidentsDay
   , thanksgivingDay
+  , goodFriday year
   ]
 
 nycTz :: TimezoneOffset
@@ -195,3 +227,29 @@ newYearsDay     = Fixed (FixedHoliday 1 January None nycTz)
 laborDay        = Rule (mkHolidayRule September 1 Monday) -- first monday in september
 presidentsDay   = Rule (mkHolidayRule February 3 Monday)  -- third monday in February
 thanksgivingDay = Rule (mkHolidayRule November 4 Monday)  -- fourth thursday in November
+
+-------------------------------------------------------------------------------
+-- Easter Holidays
+-------------------------------------------------------------------------------
+
+goodFriday, easterMonday :: Int -> Holiday
+goodFriday = Easter . goodFriday'
+easterMonday = Easter . easterMonday'
+
+goodFriday' :: Int -> EasterHoliday
+goodFriday' yr = EasterHoliday $ sub dt (days 2)
+  where
+    EasterHoliday dt = easterSunday' yr
+
+easterMonday' :: Int -> EasterHoliday
+easterMonday' yr = EasterHoliday $ add dt (days 1)
+  where
+    EasterHoliday dt = easterSunday' yr
+
+easterSunday' :: Int -> EasterHoliday
+easterSunday' yr = EasterHoliday datetime
+  where
+    (_ ,mo,day) = toGregorian $ gregorianEaster $ fromIntegral yr
+    month = toEnum $ mo - 1
+    dateTime = DateTime (Date yr month day) (TimeOfDay 0 0 0 0)
+    datetime = dateTimeToDatetime dateTime

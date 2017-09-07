@@ -57,7 +57,7 @@ data Datetime = Datetime
   , second   :: Int -- ^ The number of seconds since the begining of the minute, between 0 and 59
   , zone     :: Int -- ^ The local zone offset, in minutes of advance wrt UTC.
   , week_day :: Int -- ^ The number of days since sunday, between 0 and 6
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance Serialize Datetime where
   put Datetime {..} = do
@@ -129,7 +129,7 @@ dateTimeToDatetime dt = Datetime {
   , hour     = fromIntegral $ todHour (dtTime dt)
   , minute   = fromIntegral $ todMin (dtTime dt)
   , second   = fromIntegral $ todSec (dtTime dt)
-  , zone     = 0
+  , zone     = 0 -- XXX
   , week_day = fromEnum $ getWeekDay (dtDate dt)
   }
 
@@ -225,7 +225,9 @@ diff d1' d2' = Delta period duration
         pYrs = p <> dPeriod (years 1)
         pMos = p <> dPeriod (months 1)
         pDys = p <> dPeriod (days 1)
-        [dtpYrs, dtpMos, dtpDys] = flip map [pYrs,pMos,pDys] $ dateTimeAddPeriod dt
+        dtpYrs = dateTimeAddPeriod dt pYrs
+        dtpMos = dateTimeAddPeriod dt pMos
+        dtpDys = dateTimeAddPeriod dt pDys
 
     -- Build the duration part of the delta
     buildDurDiff :: DateTime -> Duration -> Duration
@@ -238,7 +240,9 @@ diff d1' d2' = Delta period duration
         dHrs = d { durationHours = durationHours d + 1 }
         dMns = d { durationMinutes = durationMinutes d + 1 }
         dScs = d { durationSeconds = durationSeconds d + 1 }
-        [d1dHrs, d1dMns, d1dScs] = map (timeAdd dt) [dHrs,dMns,dScs]
+        d1dHrs = timeAdd dt dHrs
+        d1dMns = timeAdd dt dMns
+        d1dScs = timeAdd dt dScs
 
 -- | Check whether a date lies within an interval
 within :: Datetime -> Interval -> Bool
