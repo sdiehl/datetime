@@ -4,7 +4,7 @@
 
 name:           datetimes
 version:        0.1.0.0
-author:         Stephen Diehl
+author:         Adjoint Inc
 license:        MIT
 build-type:     Simple
 cabal-version:  >= 1.10
@@ -14,15 +14,34 @@ library
       src
   ghc-options: -fwarn-unused-imports -fwarn-incomplete-patterns
   build-depends:
-      base ==4.9.*
-    , protolude ==0.1.*
-    , hourglass
-    , aeson
-    , cereal
+      base >= 4.7 && < 5
+    , protolude >=0.2
+    , hourglass >=0.2
+    , aeson >=1.1
+    , cereal >=0.5
   exposed-modules:
       Main
       Holiday
       Holiday.Types
   other-modules:
       Paths_datetimes
+  default-language: Haskell2010
+
+test-suite matrix-test
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  hs-source-dirs:
+      test
+  build-depends:
+      base >= 4.7 && < 5
+    , protolude >=0.2
+    , hourglass >=0.2
+    , aeson >=1.1
+    , cereal >=0.5
+    , base >= 4.7
+    , protolude >= 0.2
+    , QuickCheck
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
   default-language: Haskell2010
