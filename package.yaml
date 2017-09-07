@@ -13,6 +13,7 @@ library:
   ghc-options:
     -fwarn-unused-imports
     -fwarn-incomplete-patterns
+    -fwarn-incomplete-uni-patterns
   exposed-modules:
   - Main
   - Holiday

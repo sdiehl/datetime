@@ -5,6 +5,8 @@ module Holiday (
   HolidayRule(..),
   Observance(..),
 
+  module Time.Types,
+
   isWeekend,
   isWeekday,
   isBusiness,
@@ -15,6 +17,7 @@ module Holiday (
 
 import Data.Either (partitionEithers)
 import Data.Hourglass
+import qualified Time.Types
 
 import Holiday.Types
 

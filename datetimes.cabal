@@ -12,7 +12,7 @@ cabal-version:  >= 1.10
 library
   hs-source-dirs:
       src
-  ghc-options: -fwarn-unused-imports -fwarn-incomplete-patterns
+  ghc-options: -fwarn-unused-imports -fwarn-incomplete-patterns -fwarn-incomplete-uni-patterns
   build-depends:
       base >= 4.7 && < 5
     , protolude >=0.2
