@@ -25,7 +25,6 @@ suite = testGroup "Test Suite"
 
       -- Assert correct # of days filtered from past year as NYSE Holidays
       let nyseHolidays' = filter isNYSEHoliday yearDts
-      print nyseHolidays'
       assertEqual
         "Correct number of NYSE holidays found"
         (length $ nyseHolidays currYear)

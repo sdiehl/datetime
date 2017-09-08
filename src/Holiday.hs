@@ -146,12 +146,14 @@ matchHolidays dt holidays = or
 -- day/month/year of the fixed holiday
 matchFixedHoliday :: Datetime -> FixedHoliday -> Bool
 matchFixedHoliday dt (FixedHoliday fday fmonth obs tz) = and
-  [ fromEnum fmonth == month shiftedDt
-  , fday          == day shiftedDt
+  [ month dt == month shiftedDt
+  , day dt   == day shiftedDt
   -- XXX , match timezone here
   ]
   where
-    shiftedDt = observedShift obs dt
+    fixedDate = Date (year dt) fmonth fday
+    fixedDT   = DateTime fixedDate $ TimeOfDay 0 0 0 0
+    shiftedDt = observedShift obs $ dateTimeToDatetime fixedDT
 
 -- | A Datetime matches the Holiday rule iff:
 -- 1) the weekday of the datetime is the same as in the holiday rule
@@ -217,8 +219,8 @@ boxingDay = Fixed $ FixedHoliday 26 December Nearest_workday lonTz
 -- <https://www.nyse.com/markets/hours-calendars>
 nyseHolidays :: Int -> [Holiday]
 nyseHolidays year =
-  [ christmasDay
-  , independenceDay
+  [ independenceDay
+  , christmasDay
   , memorialDay
   , newYearsDay
   , laborDay
@@ -232,7 +234,7 @@ nycTz = TimezoneOffset 300
 
 christmasDay    = Fixed (FixedHoliday 25 December Nearest_workday nycTz)
 independenceDay = Fixed (FixedHoliday 4 July Nearest_workday nycTz)
-memorialDay     = Fixed (FixedHoliday 25 May None nycTz)
+memorialDay     = Fixed (FixedHoliday 25 May None nycTz) -- XXX last monday of may
 newYearsDay     = Fixed (FixedHoliday 1 January None nycTz)
 laborDay        = Rule (mkHolidayRule September 1 Monday) -- first monday in september
 presidentsDay   = Rule (mkHolidayRule February 3 Monday)  -- third monday in February
