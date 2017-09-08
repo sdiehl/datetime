@@ -201,15 +201,26 @@ isBusiness dt = not (isHoliday dt) && not (isWeekend dt)
 -- <https://www.gov.uk/bank-holidays>
 ukHolidays :: Int -> [Holiday]
 ukHolidays year =
-  [ boxingDay
+  [ christmasDay
+  , boxingDay
+  , newYearsDay
   , goodFriday year
   , easterMonday year
+  , earlyMayBank
+  , springBank
+  , lateSummerBank
   ]
 
 lonTz :: TimezoneOffset
 lonTz = TimezoneOffset 0
 
 boxingDay = Fixed $ FixedHoliday 26 December Nearest_workday lonTz
+
+-- Bank Holidays
+
+earlyMayBank   = Rule (HolidayRule May First Monday)
+springBank     = Rule (HolidayRule May Last Monday)
+lateSummerBank = Rule (HolidayRule August Last Monday)
 
 -------------------------------------------------------------------------------
 -- United States ( NYSE )
@@ -233,9 +244,7 @@ nyseHolidays year =
 nycTz :: TimezoneOffset
 nycTz = TimezoneOffset 300
 
-christmasDay    = Fixed (FixedHoliday 25 December Nearest_workday nycTz)
 independenceDay = Fixed (FixedHoliday 4 July Nearest_workday nycTz)
-newYearsDay     = Fixed (FixedHoliday 1 January Next_monday nycTz)
 memorialDay     = Rule (HolidayRule May Last Monday)
 martinlutherDay = Rule (HolidayRule January Third Monday)
 laborDay        = Rule (HolidayRule September First Monday)
@@ -267,3 +276,10 @@ easterSunday' yr = EasterHoliday datetime
     month = toEnum $ mo - 1
     dateTime = DateTime (Date yr month day) (TimeOfDay 0 0 0 0)
     datetime = dateTimeToDatetime dateTime
+
+-------------------------------------------------------------------------------
+-- Generic Holidays
+-------------------------------------------------------------------------------
+
+christmasDay    = Fixed (FixedHoliday 25 December Nearest_workday nycTz)
+newYearsDay     = Fixed (FixedHoliday 1 January Next_monday nycTz)

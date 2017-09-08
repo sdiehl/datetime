@@ -23,19 +23,29 @@ nyse2017Holidays = map dateTimeToDatetime
   , DateTime (Date 2017 December 25) (TimeOfDay 0 0 0 0)
   ]
 
+uk2017Holidays = map dateTimeToDatetime
+  [ DateTime (Date 2017 January 2)   (TimeOfDay 0 0 0 0)
+  , DateTime (Date 2017 April 14)    (TimeOfDay 0 0 0 0)
+  , DateTime (Date 2017 April 17)    (TimeOfDay 0 0 0 0)
+  , DateTime (Date 2017 May 1)       (TimeOfDay 0 0 0 0)
+  , DateTime (Date 2017 May 29)      (TimeOfDay 0 0 0 0)
+  , DateTime (Date 2017 August 28)   (TimeOfDay 0 0 0 0)
+  , DateTime (Date 2017 December 25) (TimeOfDay 0 0 0 0)
+  , DateTime (Date 2017 December 26) (TimeOfDay 0 0 0 0)
+  ]
+
 suite :: TestTree
 suite = testGroup "Test Suite"
   [ testCase "Correctly identifies Holidays" $ do
       let jan1st2017 = dateTimeToDatetime $
             DateTime (Date 2017 January 1) (TimeOfDay 0 0 0 0)
+      let currYear = year jan1st2017
       let yearDts = take 365 $
             flip unfoldr jan1st2017 $ \dt ->
               Just (dt, add dt (days 1))
 
-      let currYear = year jan1st2017
-
-      -- Assert correct # of days filtered from past year as NYSE Holidays
       let nyseHolidays' = filter isNYSEHoliday yearDts
+
       assertEqual
         "Correct NYSE holidays found"
         nyse2017Holidays
@@ -46,8 +56,13 @@ suite = testGroup "Test Suite"
         (length $ nyseHolidays currYear)
         (length nyseHolidays')
 
-      -- Assert correct # of days filtered from past year as UK Holidays
       let ukHolidays' = filter isUKHoliday yearDts
+
+      assertEqual
+        "Correct UK holidays found"
+        uk2017Holidays
+        ukHolidays'
+
       assertEqual
         "Correct number of UK holidays found"
         (length $ ukHolidays currYear)
