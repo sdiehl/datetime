@@ -18,7 +18,7 @@ module Holiday (
 ) where
 
 import Prelude hiding (show)
-import Protolude
+import Protolude hiding (First, Last)
 
 import Data.Hourglass
 import Data.Time.Calendar (toGregorian)
@@ -48,20 +48,22 @@ data FixedHoliday = FixedHoliday
   , timezone        :: TimezoneOffset
   } deriving (Show)
 
+data WeekdayPos
+  = First   -- ^ The first occurrence of the weekday
+  | Second  -- ^ The second occurrence of the weekday
+  | Third   -- ^ The third occurrence of the weekday
+  | Fourth  -- ^ The fourth occurrence of the weekday
+  | Last    -- ^ The fifth, or last occurrence. Sometimes overlaps with Fourth.
+  deriving (Show, Eq, Enum)
+
 -- | Specifies a recurrence rule for holidays that have a logical yearly
 -- recurrence date rather than a fixed date every year. YEAR recurrence
 -- is implicit, therefore no recurrence rule is specified.
 data HolidayRule = HolidayRule
-  { monthOfYear :: Month
-  , weekOfMonth :: Int
-  , dayOfWeek   :: WeekDay
+  { monthOfYear :: Month      -- ^ The month the holiday occurs on
+  , weekDayPos  :: WeekdayPos -- ^ What number weekday in the month (e.g. 4th Monday)
+  , weekDay     :: WeekDay    -- ^ The weekday the holiday occurs on
   } deriving (Show)
-
--- | Smart constructor for `HolidayRule`, trims weeks to max 5, min 0
-mkHolidayRule :: Month -> Int -> WeekDay -> HolidayRule
-mkHolidayRule month week' day = HolidayRule month week day
-  where
-    week = min 5 $ max 0 week'
 
 data EasterHoliday = EasterHoliday Datetime
   deriving (Show)
@@ -158,19 +160,17 @@ matchFixedHoliday dt (FixedHoliday fday fmonth obs tz) = and
 -- | A Datetime matches the Holiday rule iff:
 -- 1) the weekday of the datetime is the same as in the holiday rule
 -- 2) the month of the datetime is the same as in the holiday rule
--- 3) the day `wkNum - 1` weeks ago is within the same month as the holiday rule
+-- 3) the position of the weekday in the month matches
 matchHolidayRule :: Datetime -> HolidayRule -> Bool
-matchHolidayRule dt (HolidayRule month' wkNum wkDay) = and
-    [ getWeekDay date       == wkDay -- 1)
-    , dateMonth date        == month' -- 2)
-    , countWeekDayOccs dt   == wkNum
+matchHolidayRule dt (HolidayRule month' wkDayPos wkDay) = and
+    [ getWeekDay date   == wkDay    -- 1)
+    , dateMonth date    == month'   -- 2)
+    , findWeekdayPos dt == wkDayPos -- 3)
     ]
   where
     date = dtDate $ datetimeToDateTime dt
+    findWeekdayPos dt' = toEnum $ day dt' `div` 7
 
-    countWeekDayOccs dt'
-      | fromEnum month' /= month dt' = 0
-      | otherwise = 1 + countWeekDayOccs (sub dt' $ weeks 1)
 
 matchEasterHoliday :: Datetime -> EasterHoliday -> Bool
 matchEasterHoliday dt (EasterHoliday datetime) =
@@ -223,6 +223,7 @@ nyseHolidays year =
   , christmasDay
   , memorialDay
   , newYearsDay
+  , martinlutherDay
   , laborDay
   , presidentsDay
   , thanksgivingDay
@@ -234,11 +235,12 @@ nycTz = TimezoneOffset 300
 
 christmasDay    = Fixed (FixedHoliday 25 December Nearest_workday nycTz)
 independenceDay = Fixed (FixedHoliday 4 July Nearest_workday nycTz)
-memorialDay     = Fixed (FixedHoliday 25 May None nycTz) -- XXX last monday of may
-newYearsDay     = Fixed (FixedHoliday 1 January None nycTz)
-laborDay        = Rule (mkHolidayRule September 1 Monday) -- first monday in september
-presidentsDay   = Rule (mkHolidayRule February 3 Monday)  -- third monday in February
-thanksgivingDay = Rule (mkHolidayRule November 4 Monday)  -- fourth thursday in November
+newYearsDay     = Fixed (FixedHoliday 1 January Next_monday nycTz)
+memorialDay     = Rule (HolidayRule May Last Monday)
+martinlutherDay = Rule (HolidayRule January Third Monday)
+laborDay        = Rule (HolidayRule September First Monday)
+presidentsDay   = Rule (HolidayRule February Third Monday)
+thanksgivingDay = Rule (HolidayRule November Fourth Thursday)
 
 -------------------------------------------------------------------------------
 -- Easter Holidays
