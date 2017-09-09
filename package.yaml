@@ -1,19 +1,36 @@
 name: datetimes
 version: '0.1.0.0'
-author: Stephen Diehl
-license: MIT
+author: Adjoint Inc
+maintainer: Adjoint Inc (info@adjoint.io)
+license: Apache
+github: adjoint-io/datetime
+category: Development
 dependencies:
-- base ==4.9.*
-- protolude ==0.1.*
-- hourglass
-- aeson
-- cereal
+- base >= 4.7 && < 5
+- protolude >=0.2
+- hourglass >=0.2
+- aeson >=1.1
+- cereal >=0.5
+- time >=1.6.0.1
 library:
   source-dirs: src
   ghc-options:
     -fwarn-unused-imports
     -fwarn-incomplete-patterns
+    -fwarn-incomplete-uni-patterns
   exposed-modules:
-  - Main
-  - Types
   - Holiday
+  - Holiday.Types
+
+tests:
+  matrix-test:
+    dependencies:
+    - base >= 4.7
+    - protolude >= 0.2
+    - datetimes
+    - QuickCheck
+    - tasty
+    - tasty-hunit
+    - tasty-quickcheck
+    main: Test.hs
+    source-dirs: test
