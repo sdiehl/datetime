@@ -12,9 +12,11 @@ module Holiday (
   isBusiness,
   isHoliday,
 
+  -- ** Holiday sets
   ukHolidays,
-  isUKHoliday,
   nyseHolidays,
+
+  isUKHoliday,
   isNYSEHoliday,
 ) where
 
@@ -40,14 +42,14 @@ data Observance
   | Previous_friday         -- ^ Move Saturday and Sunday to previous Friday
   | Next_monday             -- ^ Move Saturday and Sunday to following Monday
   | None                    -- ^ Always on a fixed date
-  deriving (Show)
+  deriving (Show, Eq)
 
 data FixedHoliday = FixedHoliday
   { recurrenceDay   :: Int
   , recurrenceMonth :: Month
   , observance      :: Observance
   , timezone        :: TimezoneOffset
-  } deriving (Show)
+  } deriving (Show, Eq)
 
 data WeekdayPos
   = First   -- ^ The first occurrence of the weekday
@@ -64,16 +66,16 @@ data HolidayRule = HolidayRule
   { monthOfYear :: Month      -- ^ The month the holiday occurs on
   , weekDayPos  :: WeekdayPos -- ^ What number weekday in the month (e.g. 4th Monday)
   , weekDay     :: WeekDay    -- ^ The weekday the holiday occurs on
-  } deriving (Show)
+  } deriving (Show, Eq)
 
 data EasterHoliday = EasterHoliday Datetime
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Holiday
   = Fixed FixedHoliday
   | Rule HolidayRule
   | Easter EasterHoliday
-  deriving (Show)
+  deriving (Show, Eq)
 
 partitionHolidays :: [Holiday] -> ([FixedHoliday],[HolidayRule],[EasterHoliday])
 partitionHolidays = foldl' partition' ([],[],[])

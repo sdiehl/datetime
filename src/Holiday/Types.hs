@@ -45,11 +45,12 @@ import Data.Hourglass
 
 import Data.Int
 import Data.Aeson
-import GHC.Generics (Generic)
 import Data.Monoid ((<>))
 import Data.Serialize
 
-import Time.System
+import GHC.Generics (Generic)
+
+import Time.System (timezoneCurrent, dateCurrent)
 
 -------------------------------------------------------------------------------
 -- Types
@@ -91,7 +92,6 @@ instance Serialize Datetime where
     zone     <- getInt
     week_day <- getInt
     let dt = Datetime {..}
-    -- XXX: do validation logic here
     case isValid dt of
       Left err -> fail err
       Right _  -> pure dt
@@ -124,7 +124,7 @@ isValid (Datetime {..}) = sequence_ [
 data Delta = Delta
   { dPeriod   :: Period   -- ^ An amount of conceptual calendar time in terms of years, months and days.
   , dDuration :: Duration -- ^ An amount of time measured in hours/mins/secs/nsecs
-  } deriving (Show)
+  } deriving (Show, Generic)
 
 instance Monoid Delta where
   mempty = Delta mempty mempty
@@ -135,7 +135,7 @@ instance Monoid Delta where
 data Interval = Interval
   { iStart :: Datetime
   , iStop  :: Datetime
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic)
 
 -- | Conversion function between Data.Hourglass.DateTime and Datetime defined in
 -- this module.
@@ -204,9 +204,6 @@ years n = flip Delta mempty
 
 weeks :: Int -> Delta
 weeks n = days (7*n)
-
-fortnights :: Int -> Delta
-fortnights n = weeks (2*n)
 
 -------------------------------------------------------------------------------
 -- Calendar Arithmetic
@@ -327,6 +324,7 @@ minMax mini maxi = max maxi . min mini
 -- System Time
 -------------------------------------------------------------------------------
 
+-- | Current system time
 now :: IO Datetime
 now = do
   TimezoneOffset zone <- timezoneCurrent
