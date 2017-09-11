@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://www.adjoint.io/images/logo-small.png" width="250"/>
+  <a href="http://www.adjoint.io"><img src="https://www.adjoint.io/images/logo-small.png" width="250"/></a>
 </p>
 
 Calendars
