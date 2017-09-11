@@ -3,10 +3,10 @@
 
 module Holiday (
   -- ** Holiday recurrence rules
+  Holiday,
   HolidaySet(..),
   HolidayRule(..),
   Observance(..),
-  Holiday,
   WeekdayPos,
 
   -- ** Holiday sets
@@ -33,11 +33,20 @@ import Data.Time.Calendar.Easter (gregorianEaster)
 
 import Holiday.Types
 
+-- | Holiday recucrrence rule
+data Holiday
+  = Fixed FixedHoliday
+  | Rule HolidayRule
+  | Easter EasterHoliday
+  deriving (Show, Eq)
+
+-- | Holiday generating set
 data HolidaySet
   = UnitedKingdom [Holiday]
   | NYSE [Holiday]
   deriving (Show)
 
+-- | Holiday observation rule
 data Observance
   = Nearest_workday         -- ^ Move Saturday to Friday and Sunday to Monday
   | Sunday_to_monday        -- ^ Move Sunday to following Monday
@@ -47,6 +56,7 @@ data Observance
   | None                    -- ^ Always on a fixed date
   deriving (Show, Eq)
 
+-- | Fixed holiday recurrence rule
 data FixedHoliday = FixedHoliday
   { recurrenceDay   :: Int
   , recurrenceMonth :: Month
@@ -71,13 +81,8 @@ data HolidayRule = HolidayRule
   , weekDay     :: WeekDay    -- ^ The weekday the holiday occurs on
   } deriving (Show, Eq)
 
+-- | Easter holiday recurrence rule
 data EasterHoliday = EasterHoliday Datetime
-  deriving (Show, Eq)
-
-data Holiday
-  = Fixed FixedHoliday
-  | Rule HolidayRule
-  | Easter EasterHoliday
   deriving (Show, Eq)
 
 partitionHolidays :: [Holiday] -> ([FixedHoliday],[HolidayRule],[EasterHoliday])
@@ -130,14 +135,17 @@ observedShift obs datetime = case obs of
 
 type HolidayGen = Int -> [Holiday]
 
+-- | Query if a given daate is on a holiday
 isHoliday :: HolidayGen -> Datetime -> Bool
 isHoliday hs dt = matchHolidays dt holidays
   where
     holidays = hs (year dt)
 
+-- | Query if a given daate is on a UK holiday
 isUKHoliday :: Datetime -> Bool
 isUKHoliday = isHoliday ukHolidays
 
+-- | Query if a given daate is on a US holiday
 isNYSEHoliday :: Datetime -> Bool
 isNYSEHoliday = isHoliday nyseHolidays
 
