@@ -12,8 +12,8 @@ A library for financial datetime manipulations.
 Example data structures:
 
 ```haskell
-import Holiday
-import Holiday.Types
+import Datetime 
+import Datetime.Types
 import Data.Aeason as A
 
 christmas :: Datetime

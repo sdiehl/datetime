@@ -19,8 +19,8 @@ library:
     -fwarn-incomplete-patterns
     -fwarn-incomplete-uni-patterns
   exposed-modules:
-  - Holiday
-  - Holiday.Types
+  - Datetime 
+  - Datetime.Types
 
 tests:
   matrix-test:

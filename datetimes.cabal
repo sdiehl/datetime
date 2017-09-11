@@ -4,12 +4,13 @@
 
 name:           datetimes
 version:        0.1.0.0
-category:       Development
+category:       Finance
 homepage:       https://github.com/adjoint-io/datetime#readme
 bug-reports:    https://github.com/adjoint-io/datetime/issues
 author:         Adjoint Inc
 maintainer:     Adjoint Inc (info@adjoint.io)
 license:        Apache
+license-file:   LICENSE
 build-type:     Simple
 cabal-version:  >= 1.10
 
@@ -29,8 +30,8 @@ library
     , cereal >=0.5
     , time >=1.6.0.1
   exposed-modules:
-      Holiday
-      Holiday.Types
+      Datetime
+      Datetime.Types
   other-modules:
       Paths_datetimes
   default-language: Haskell2010

@@ -6,7 +6,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Holiday.Types (
+module Datetime.Types (
   Datetime(..),
   Delta(..),
 
@@ -41,6 +41,7 @@ module Holiday.Types (
   -- ** Conversion
   dateTimeToDatetime,
   datetimeToDateTime,
+  posixToDatetime,
 
   -- ** Delta operation
   add,
@@ -75,7 +76,6 @@ import qualified Time.Types
 -------------------------------------------------------------------------------
 -- Types
 -------------------------------------------------------------------------------
-
 
 data Datetime = Datetime
   { year     :: Int -- ^ The complete year
@@ -193,6 +193,9 @@ datetimeToDateTime dt = DateTime {
       , todSec  = fromIntegral (second dt)
       , todNSec = 0
       }
+
+posixToDatetime :: Int64 -> Datetime
+posixToDatetime = dateTimeToDatetime . timeFromElapsed . Elapsed . Seconds
 
 -------------------------------------------------------------------------------
 -- Delta combinators

@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Holiday (
+module Datetime (
   -- ** Holiday recurrence rules
   Holiday,
   HolidaySet(..),
@@ -23,9 +23,6 @@ module Holiday (
   -- ** Holiday queries
   isUKHoliday,
   isNYSEHoliday,
-
-  -- ** UTC to DateTime
-  timeConvert,
 ) where
 
 import Protolude hiding (First, Last)
@@ -34,7 +31,7 @@ import Data.Hourglass
 import Data.Time.Calendar (toGregorian)
 import Data.Time.Calendar.Easter (gregorianEaster)
 
-import Holiday.Types
+import Datetime.Types
 
 -- | Holiday recucrrence rule
 data Holiday
