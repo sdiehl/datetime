@@ -99,6 +99,7 @@ instance Serialize Datetime where
       getInt :: Get Int
       getInt = fmap fromIntegral (get :: Get Int64)
 
+-- | Check whether a date is correctly formed
 isValid :: Datetime -> Either [Char] ()
 isValid (Datetime {..}) = sequence_ [
     cond (year > 0)                       "Year is invalid"
@@ -134,7 +135,7 @@ instance Monoid Delta where
 data Interval = Interval
   { iStart :: Datetime
   , iStop  :: Datetime
-  }
+  } deriving (Eq, Show)
 
 -- | Conversion function between Data.Hourglass.DateTime and Datetime defined in
 -- this module.

@@ -9,7 +9,7 @@ Datetimes
 
 A library for financial datetime manipulations.
 
-Example data strutures:
+Example data structures:
 
 ```haskell
 import Holiday
@@ -27,6 +27,12 @@ christmas = Datetime
   , zone     = 0
   , week_day = 1
   }
+
+q1, q2, q3, a4 :: Interval
+q1 = Interval (fomonth 2017 January) (eomonth 2017 March)
+q2 = Interval (fomonth 2017 April) (eomonth 2017 June)
+q3 = Interval (fomonth 2017 July) (eomonth 2017 September)
+q4 = Interval (fomonth 2017 October) (eomonth 2017 December)
 
 eom :: Datetime
 eom = eomonth 2017 March
