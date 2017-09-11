@@ -28,11 +28,8 @@ christmas = Datetime
   , week_day = 1
   }
 
-q1, q2, q3, a4 :: Interval
-q1 = Interval (fomonth 2017 January) (eomonth 2017 March)
-q2 = Interval (fomonth 2017 April) (eomonth 2017 June)
-q3 = Interval (fomonth 2017 July) (eomonth 2017 September)
-q4 = Interval (fomonth 2017 October) (eomonth 2017 December)
+-- Fiscal Quarters 2017
+let (q1,q2,q3,q4) = fiscalQuarters 2017
 
 eom :: Datetime
 eom = eomonth 2017 March
@@ -53,7 +50,10 @@ main = do
 
   print (isBusiness eom)
   print (daysBetween (eomonth 2017 March) (eomonth 2019 March))
-  print (christmas `within` q4)
+ 
+  print (christmas `within` q4) -- True
+  print (christmas `within` q2) -- False 
+  print $ (christmas `sub` months 11) `within` q1 2017 -- True 
 
   nowDt <- now
   print nowDt
