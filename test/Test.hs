@@ -8,8 +8,8 @@ import Data.List (unfoldr)
 import Data.Hourglass
 import Data.Hourglass.Types
 
-import Holiday
-import Holiday.Types
+import Datetime
+import Datetime.Types
 
 nyse2017Holidays = map dateTimeToDatetime
   [ DateTime (Date 2017 January 2)   (TimeOfDay 0 0 0 0)

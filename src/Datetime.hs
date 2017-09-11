@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Holiday (
+module Datetime (
   -- ** Holiday recurrence rules
   Holiday,
   HolidaySet(..),
@@ -34,7 +34,7 @@ import Data.Hourglass
 import Data.Time.Calendar (toGregorian)
 import Data.Time.Calendar.Easter (gregorianEaster)
 
-import Holiday.Types
+import Datetime.Types
 
 -- | Holiday recucrrence rule
 data Holiday

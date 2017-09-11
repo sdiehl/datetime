@@ -6,7 +6,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Holiday.Types (
+module Datetime.Types (
   Datetime(..),
   Delta(..),
 
