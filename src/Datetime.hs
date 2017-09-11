@@ -23,9 +23,6 @@ module Datetime (
   -- ** Holiday queries
   isUKHoliday,
   isNYSEHoliday,
-
-  -- ** UTC to DateTime
-  timeConvert,
 ) where
 
 import Protolude hiding (First, Last)
