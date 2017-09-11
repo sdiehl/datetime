@@ -136,14 +136,10 @@ isHoliday hs dt = matchHolidays dt holidays
     holidays = hs (year dt)
 
 isUKHoliday :: Datetime -> Bool
-isUKHoliday dt = matchHolidays dt holidays
-  where
-    holidays = ukHolidays (year dt)
+isUKHoliday = isHoliday ukHolidays
 
 isNYSEHoliday :: Datetime -> Bool
-isNYSEHoliday dt = matchHolidays dt holidays
-  where
-    holidays = nyseHolidays (year dt)
+isNYSEHoliday = isHoliday nyseHolidays
 
 matchHolidays :: Datetime -> [Holiday] -> Bool
 matchHolidays dt holidays = or
