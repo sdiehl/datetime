@@ -135,17 +135,17 @@ observedShift obs datetime = case obs of
 
 type HolidayGen = Int -> [Holiday]
 
--- | Query if a given daate is on a holiday
+-- | Query if a given date is on a holiday
 isHoliday :: HolidayGen -> Datetime -> Bool
 isHoliday hs dt = matchHolidays dt holidays
   where
     holidays = hs (year dt)
 
--- | Query if a given daate is on a UK holiday
+-- | Query if a given date is on a UK holiday
 isUKHoliday :: Datetime -> Bool
 isUKHoliday = isHoliday ukHolidays
 
--- | Query if a given daate is on a US holiday
+-- | Query if a given date is on a US holiday
 isNYSEHoliday :: Datetime -> Bool
 isNYSEHoliday = isHoliday nyseHolidays
 
@@ -193,7 +193,7 @@ matchEasterHoliday dt (EasterHoliday datetime) =
     dateTuple = (year dt, month dt, day dt)
     easter = (year datetime, month datetime, day datetime)
 
--- | Query if a given daate is on a weekday
+-- | Query if a given date is on a weekday
 isWeekday :: Datetime -> Bool
 isWeekday = go . getWeekDay . dtDate . datetimeToDateTime
   where
@@ -202,11 +202,11 @@ isWeekday = go . getWeekDay . dtDate . datetimeToDateTime
       Sunday   -> False
       _        -> True
 
--- | Query if a given daate is on a weekend
+-- | Query if a given date is on a weekend
 isWeekend :: Datetime -> Bool
 isWeekend = not . isWeekday
 
--- | Query if a given daate is a business day
+-- | Query if a given date is a business day
 isBusiness :: HolidayGen -> Datetime -> Bool
 isBusiness hs dt = not (isHoliday hs dt) && not (isWeekend dt)
 
