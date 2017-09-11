@@ -6,16 +6,19 @@ module Holiday (
   HolidaySet(..),
   HolidayRule(..),
   Observance(..),
+  Holiday,
+  WeekdayPos,
+
+  -- ** Holiday sets
+  HolidayGen,
+  ukHolidays,
+  nyseHolidays,
 
   -- ** Business day status
   isWeekend,
   isWeekday,
   isBusiness,
   isHoliday,
-
-  -- ** Holiday sets
-  ukHolidays,
-  nyseHolidays,
 
   -- ** Holiday queries
   isUKHoliday,
@@ -125,8 +128,12 @@ observedShift obs datetime = case obs of
 -- Queries
 -------------------------------------------------------------------------------
 
-isHoliday :: Datetime -> Bool
-isHoliday dt = isUKHoliday dt || isNYSEHoliday dt
+type HolidayGen = Int -> [Holiday]
+
+isHoliday :: HolidayGen -> Datetime -> Bool
+isHoliday hs dt = matchHolidays dt holidays
+  where
+    holidays = hs (year dt)
 
 isUKHoliday :: Datetime -> Bool
 isUKHoliday dt = matchHolidays dt holidays
@@ -182,6 +189,7 @@ matchEasterHoliday dt (EasterHoliday datetime) =
     dateTuple = (year dt, month dt, day dt)
     easter = (year datetime, month datetime, day datetime)
 
+-- | Query if a given daate is on a weekday
 isWeekday :: Datetime -> Bool
 isWeekday = go . getWeekDay . dtDate . datetimeToDateTime
   where
@@ -190,11 +198,13 @@ isWeekday = go . getWeekDay . dtDate . datetimeToDateTime
       Sunday   -> False
       _        -> True
 
+-- | Query if a given daate is on a weekend
 isWeekend :: Datetime -> Bool
 isWeekend = not . isWeekday
 
-isBusiness :: Datetime -> Bool
-isBusiness dt = not (isHoliday dt) && not (isWeekend dt)
+-- | Query if a given daate is a business day
+isBusiness :: HolidayGen -> Datetime -> Bool
+isBusiness hs dt = not (isHoliday hs dt) && not (isWeekend dt)
 
 -------------------------------------------------------------------------------
 -- United Kingdom
