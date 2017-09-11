@@ -1,12 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module Holiday (
   -- ** Holiday recurrence rules
   HolidaySet(..),
   HolidayRule(..),
   Observance(..),
-
-  module Time.Types,
 
   -- ** Business day status
   isWeekend,
@@ -28,7 +27,6 @@ import Protolude hiding (First, Last)
 import Data.Hourglass
 import Data.Time.Calendar (toGregorian)
 import Data.Time.Calendar.Easter (gregorianEaster)
-import qualified Time.Types
 
 import Holiday.Types
 

@@ -3,12 +3,15 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module Holiday.Types (
   Datetime(..),
   Delta,
   dPeriod,
   dDuration,
+
+  module Time.Types, -- reexport
 
   -- ** Constructors
   secs,
@@ -41,16 +44,18 @@ module Holiday.Types (
   now,
 ) where
 
+import Protolude hiding (get, put, second, diff)
 import Data.Hourglass
 
-import Data.Int
 import Data.Aeson
 import Data.Monoid ((<>))
 import Data.Serialize
 
+import Control.Monad (fail)
 import GHC.Generics (Generic)
 
 import Time.System (timezoneCurrent, dateCurrent)
+import qualified Time.Types
 
 -------------------------------------------------------------------------------
 -- Types
