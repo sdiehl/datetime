@@ -41,6 +41,7 @@ module Datetime.Types (
   -- ** Conversion
   dateTimeToDatetime,
   datetimeToDateTime,
+  utcTimeToDatetime,
 
   -- ** Delta operation
   add,
@@ -65,6 +66,7 @@ import Data.Hourglass
 import Data.Aeson
 import Data.Monoid ((<>))
 import Data.Serialize
+import qualified Data.Time
 
 import Control.Monad (fail)
 import GHC.Generics (Generic)
@@ -193,6 +195,21 @@ datetimeToDateTime dt = DateTime {
       , todSec  = fromIntegral (second dt)
       , todNSec = 0
       }
+
+utcTimeToDatetime :: Data.Time.UTCTime -> Datetime
+utcTimeToDatetime utctime = dateTimeToDatetime $
+    DateTime (Date (fromIntegral yr) month dy) (TimeOfDay hours mins seconds 0)
+  where
+    (yr,mo,dy) = Data.Time.toGregorian $ Data.Time.utctDay utctime
+    month = toEnum $ mo - 1
+
+    daySecs = floor $ toRational $ Data.Time.utctDayTime utctime
+    (hours',remSecs) = daySecs `divMod` (60*60)
+    (mins',secs') = remSecs `divMod` 60
+
+    hours   = Hours hours'
+    mins    = Minutes mins'
+    seconds = Seconds secs'
 
 -------------------------------------------------------------------------------
 -- Delta combinators
