@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Holiday.Types (
   Datetime(..),
@@ -18,10 +19,19 @@ module Holiday.Types (
   mins,
   hours,
 
+  -- ** Deltas
   days,
   months,
   years,
   weeks,
+
+  -- ** Ordering
+  before,
+  after,
+
+  -- ** Ranges
+  from,
+  between,
 
   -- ** Validation
   isValid,
@@ -44,7 +54,7 @@ module Holiday.Types (
   now,
 ) where
 
-import Protolude hiding (get, put, second, diff)
+import Protolude hiding (get, put, second, diff, from)
 import Data.Hourglass
 
 import Data.Aeson
@@ -209,6 +219,32 @@ years n = flip Delta mempty
 
 weeks :: Int -> Delta
 weeks n = days (7*n)
+
+-- | Infinite list of days starting from a single date.
+from :: Datetime -> [Datetime]
+from = iterate (flip add (days 1))
+
+-- | List of days between two points
+between :: Datetime -> Datetime -> [Datetime]
+between start end = takeWhile (before end) (from start)
+
+-------------------------------------------------------------------------------
+-- Ordering
+-------------------------------------------------------------------------------
+
+-- XXX: this should be correcct, what about timezones
+deriving instance Ord Datetime
+
+compareDate :: Datetime -> Datetime -> Ordering
+compareDate = compare
+
+-- | Check if first date occurs before a given date
+before :: Datetime -> Datetime -> Bool
+before x y = (compareDate x y) == GT
+
+-- | Check if first date occurs after a given date
+after :: Datetime -> Datetime -> Bool
+after x y  = (compareDate x y) == LT
 
 -------------------------------------------------------------------------------
 -- Calendar Arithmetic

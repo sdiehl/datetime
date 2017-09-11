@@ -4,7 +4,7 @@ author: Adjoint Inc
 maintainer: Adjoint Inc (info@adjoint.io)
 license: Apache
 github: adjoint-io/datetime
-category: Development
+category: Finance
 dependencies:
 - base >= 4.7 && < 5
 - protolude >=0.2

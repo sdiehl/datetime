@@ -59,7 +59,7 @@ main = do
   print nowDt
 
   print $ nowDt `add` (months 3)
-  print $ nowDt `add` ((months 3) <> (days 3))
+  print $ nowDt `add` (months 3 <> days 3)
 ```
 
 The holidays for United Kingdom and United States banking days can be generated
