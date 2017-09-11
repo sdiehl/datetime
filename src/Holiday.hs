@@ -1,12 +1,14 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Holiday (
+  -- ** Holiday recurrence rules
   HolidaySet(..),
   HolidayRule(..),
   Observance(..),
 
   module Time.Types,
 
+  -- ** Business day status
   isWeekend,
   isWeekday,
   isBusiness,
@@ -16,11 +18,11 @@ module Holiday (
   ukHolidays,
   nyseHolidays,
 
+  -- ** Holiday queries
   isUKHoliday,
   isNYSEHoliday,
 ) where
 
-import Prelude hiding (show)
 import Protolude hiding (First, Last)
 
 import Data.Hourglass

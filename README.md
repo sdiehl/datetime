@@ -52,7 +52,7 @@ main = do
   putStrLn (A.encode christmas)
 
   print (isBusiness eom)
-  print (daysBetween (eomonth 2017 March) (eomonth 2019 March ))
+  print (daysBetween (eomonth 2017 March) (eomonth 2019 March))
   print (christmas `within` q4)
 
   nowDt <- now
@@ -67,15 +67,14 @@ programatically from recurrence rules:
 
 ```haskell
 > ukHolidays 2017
-[
-     Fixed (FixedHoliday {recurrenceDay = 25, recurrenceMonth = December, observance = Nearest_workday, timezone = +0500})
-  ,  Fixed (FixedHoliday {recurrenceDay = 26, recurrenceMonth = December, observance = Nearest_workday, timezone = +0000})
-  ,  Fixed (FixedHoliday {recurrenceDay = 1, recurrenceMonth = January, observance = Next_monday, timezone = +0500})
-  ,  Easter (EasterHoliday (Datetime {year = 2017, month = 4, day = 14, hour = 0, minute = 0, second = 0, zone = 0, week_day = 5}))
-  ,  Easter (EasterHoliday (Datetime {year = 2017, month = 4, day = 17, hour = 0, minute = 0, second = 0, zone = 0, week_day = 1}))
-  ,  Rule (HolidayRule {monthOfYear = May, weekDayPos = First, weekDay = Monday})
-  ,  Rule (HolidayRule {monthOfYear = May, weekDayPos = Last, weekDay = Monday})
-  ,  Rule (HolidayRule {monthOfYear = August, weekDayPos = Last, weekDay = Monday})
+[  Fixed (FixedHoliday {recurrenceDay = 25, recurrenceMonth = December, observance = Nearest_workday, timezone = +0500})
+,  Fixed (FixedHoliday {recurrenceDay = 26, recurrenceMonth = December, observance = Nearest_workday, timezone = +0000})
+,  Fixed (FixedHoliday {recurrenceDay = 1, recurrenceMonth = January, observance = Next_monday, timezone = +0500})
+,  Easter (EasterHoliday (Datetime {year = 2017, month = 4, day = 14, hour = 0, minute = 0, second = 0, zone = 0, week_day = 5}))
+,  Easter (EasterHoliday (Datetime {year = 2017, month = 4, day = 17, hour = 0, minute = 0, second = 0, zone = 0, week_day = 1}))
+,  Rule (HolidayRule {monthOfYear = May, weekDayPos = First, weekDay = Monday})
+,  Rule (HolidayRule {monthOfYear = May, weekDayPos = Last, weekDay = Monday})
+,  Rule (HolidayRule {monthOfYear = August, weekDayPos = Last, weekDay = Monday})
 ]
 ```
 
