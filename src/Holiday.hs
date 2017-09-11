@@ -10,6 +10,7 @@ module Holiday (
   isWeekend,
   isWeekday,
   isBusiness,
+  isHoliday,
 
   ukHolidays,
   isUKHoliday,

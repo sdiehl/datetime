@@ -124,13 +124,13 @@ data Interval = Interval
 dateTimeToDatetime :: DateTime -> Datetime
 dateTimeToDatetime dt = Datetime {
     year     = dateYear (dtDate dt)
-  , month    = fromEnum (dateMonth (dtDate dt))
+  , month    = 1 + fromEnum (dateMonth (dtDate dt)) -- human convention starts at 1
   , day      = dateDay (dtDate dt)
   , hour     = fromIntegral $ todHour (dtTime dt)
   , minute   = fromIntegral $ todMin (dtTime dt)
   , second   = fromIntegral $ todSec (dtTime dt)
   , zone     = 0 -- XXX
-  , week_day = fromEnum $ getWeekDay (dtDate dt)
+  , week_day = fromEnum $ getWeekDay (dtDate dt) -- Sunday is 0
   }
 
 -- | Conversion function between Datetime and Data.Hourglass.DateTime
@@ -142,7 +142,7 @@ datetimeToDateTime dt = DateTime {
   where
     dtDate' = Date {
         dateYear  = year dt
-      , dateMonth = toEnum (month dt)
+      , dateMonth = toEnum (-1 + month dt)
       , dateDay   = day dt
       }
 
@@ -257,7 +257,7 @@ within dt (Interval start stop) =
 -- XXX Does a `day` mean 24 hours, or whenever midnight is???
 daysBetween :: Datetime -> Datetime -> Delta
 daysBetween d1' d2' =
-    Delta (Period 0 0 durDays) mempty
+    Delta (Period 0 0 (abs durDays)) mempty
   where
     (d1,d2)  = dateTimeToDatetimeAndOrderDateTime d1' d2'
     duration = fst $ fromSeconds $ timeDiff d1 d2
