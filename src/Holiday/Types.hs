@@ -8,9 +8,7 @@
 
 module Holiday.Types (
   Datetime(..),
-  Delta,
-  dPeriod,
-  dDuration,
+  Delta(..),
 
   module Time.Types, -- reexport
 
