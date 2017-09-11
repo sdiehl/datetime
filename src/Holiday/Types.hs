@@ -48,6 +48,13 @@ module Holiday.Types (
   diff,
   within,
 
+  -- ** Fiscal Quarters
+  fiscalQuarters,
+  q1,
+  q2,
+  q3,
+  q4,
+
   -- ** System time
   now,
 ) where
@@ -334,6 +341,19 @@ eomonth y m = sub foNextMonth $ Delta (Period 0 0 1) mempty
 
     foNextMonth = dateTimeToDatetime $
       DateTime (Date year nextMonth 1) (TimeOfDay 0 0 0 0)
+
+-------------------------------------------------------------------------------
+-- Fiscal Quarters
+-------------------------------------------------------------------------------
+
+fiscalQuarters :: Int -> (Interval, Interval, Interval, Interval)
+fiscalQuarters year = (q1 year, q2 year, q3 year, q4 year)
+
+q1, q2, q3, q4 :: Int -> Interval
+q1 year = Interval (fomonth year January) (eomonth year March)
+q2 year = Interval (fomonth year April) (eomonth year June)
+q3 year = Interval (fomonth year July) (eomonth year September)
+q4 year = Interval (fomonth year January) (eomonth year March)
 
 -------------------------------------------------------------------------------
 -- Helpers
