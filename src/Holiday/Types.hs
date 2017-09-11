@@ -10,6 +10,7 @@ module Holiday.Types (
   dPeriod,
   dDuration,
 
+  -- ** Constructors
   secs,
   mins,
   hours,
@@ -19,17 +20,24 @@ module Holiday.Types (
   years,
   weeks,
 
+  -- ** Validation
+  isValid,
+
+  -- ** End-of-month
   eomonth,
   fomonth,
 
+  -- ** Conversion
   dateTimeToDatetime,
   datetimeToDateTime,
 
+  -- ** Delta operation
   add,
   sub,
   diff,
   within,
 
+  -- ** System time
   now,
 ) where
 
@@ -92,7 +100,19 @@ instance Serialize Datetime where
       getInt = fmap fromIntegral (get :: Get Int64)
 
 isValid :: Datetime -> Either [Char] ()
-isValid dt = Right ()
+isValid (Datetime {..}) = sequence_ [
+    cond (year > 0)                       "Year is invalid"
+  , cond (year < 3000)                    "Year is not in current millenium"
+  , cond (month >= 1 && month <= 12)      "Month range is invalid"
+  , cond (day >= 1 && day <= 31)          "Day range is invalid"
+  , cond (hour >= 0 && hour <= 23)        "Hour range is invalid"
+  , cond (minute >= 0 && minute <= 50)    "Minute range is invalid"
+  , cond (second >= 0 && second <= 50)    "Second range is invalid"
+  , cond (week_day >= 0 && week_day <= 6) "Week day range is invalid"
+  ]
+  where
+    cond True msg = Right ()
+    cond False msg = Left msg
 
 -------------------------------------------------------------------------------
 -- Deltas and Intervals
