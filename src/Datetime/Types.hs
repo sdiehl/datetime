@@ -32,7 +32,7 @@ module Datetime.Types (
   between,
 
   -- ** Validation
-  isValid,
+  validateDatetime,
 
   -- ** End-of-month
   eomonth,
@@ -118,7 +118,7 @@ instance Serialize Datetime where
     zone     <- getInt
     week_day <- getInt
     let dt = Datetime {..}
-    case isValid dt of
+    case validateDatetime dt of
       Left err -> fail err
       Right _  -> pure dt
     where
@@ -126,8 +126,8 @@ instance Serialize Datetime where
       getInt = fmap fromIntegral (get :: Get Int64)
 
 -- | Check whether a date is correctly formed
-isValid :: Datetime -> Either [Char] ()
-isValid (Datetime {..}) = sequence_ [
+validateDatetime :: Datetime -> Either [Char] ()
+validateDatetime (Datetime {..}) = sequence_ [
     cond (year > 0)                       "Year is invalid"
   , cond (year < 3000)                    "Year is not in current millenium"
   , cond (month >= 1 && month <= 12)      "Month range is invalid"
