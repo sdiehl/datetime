@@ -45,6 +45,8 @@ module Datetime.Types (
 
   -- ** Timezones -- XXX Explicit sum type
   TimezoneOffset(..),
+  toUTC,
+  alterTimezone,
 
   -- ** Delta operation
   add,
@@ -141,6 +143,16 @@ validateDatetime (Datetime {..}) = sequence_ [
     cond True msg = Right ()
     cond False msg = Left msg
 
+-- | Convert a Datetime to UTC
+toUTC :: Datetime -> Datetime
+toUTC = alterTimezone timezone_UTC
+
+-- | Alter the Datetime timezone using logic from Data.Hourglass
+alterTimezone :: TimezoneOffset -> Datetime -> Datetime
+alterTimezone tz dt' = dateTimeToDatetime tz dt
+  where
+    dt = localTimeUnwrap $ localTime (TimezoneOffset $ zone dt') (datetimeToDateTime dt')
+
 -------------------------------------------------------------------------------
 -- Deltas and Intervals
 -------------------------------------------------------------------------------
@@ -169,16 +181,22 @@ data Interval = Interval
 -- This should be the only way to construct a Datetime value, given the use of
 -- the partial toEnum function in the Datetime -> DateTime conversion functions
 dateTimeToDatetime :: TimezoneOffset -> DateTime -> Datetime
-dateTimeToDatetime tz dt = Datetime {
-    year     = dateYear (dtDate dt)
-  , month    = 1 + fromEnum (dateMonth (dtDate dt)) -- human convention starts at 1
-  , day      = dateDay (dtDate dt)
-  , hour     = fromIntegral $ todHour (dtTime dt)
-  , minute   = fromIntegral $ todMin (dtTime dt)
-  , second   = fromIntegral $ todSec (dtTime dt)
-  , zone     = timezoneOffsetToMinutes tz
-  , week_day = fromEnum $ getWeekDay (dtDate dt) -- Sunday is 0
-  }
+dateTimeToDatetime tzo@(TimezoneOffset tzOffset) dt' = datetime
+  where
+    -- Convert DateTime to local time and then unwrap for conversion
+    dt = localTimeUnwrap $ localTimeSetTimezone tzo $ localTimeFromGlobal dt'
+
+    -- Build a Datetime from the localtime adjusted DateTime
+    datetime = Datetime {
+        year     = dateYear (dtDate dt)
+      , month    = 1 + fromEnum (dateMonth (dtDate dt)) -- human convention starts at 1
+      , day      = dateDay (dtDate dt)
+      , hour     = fromIntegral $ todHour (dtTime dt)
+      , minute   = fromIntegral $ todMin (dtTime dt)
+      , second   = fromIntegral $ todSec (dtTime dt)
+      , zone     = tzOffset
+      , week_day = fromEnum $ getWeekDay (dtDate dt) -- Sunday is 0
+      }
 
 -- | Conversion function between Datetime and Data.Hourglass.DateTime
 datetimeToDateTime :: Datetime -> DateTime
@@ -239,8 +257,16 @@ from :: Datetime -> [Datetime]
 from = iterate (flip add (days 1))
 
 -- | List of days between two points
+-- Warning: Converts second Datetime to same timezone as the start
 between :: Datetime -> Datetime -> [Datetime]
-between start end = takeWhile (before end) (from start)
+between start end = takeWhile (before end { zone = zone start}) (from start)
+
+timezoneOffsetDelta :: TimezoneOffset -> Delta
+timezoneOffsetDelta (TimezoneOffset minutes') =
+    days dys <> hours hrs <> mins minutes
+  where
+    (hrs',minutes) = minutes' `divMod` 60
+    (dys,hrs) = hrs' `divMod` 24
 
 -------------------------------------------------------------------------------
 -- Ordering
@@ -249,7 +275,7 @@ between start end = takeWhile (before end) (from start)
 deriving instance Ord Datetime
 
 compareDate :: Datetime -> Datetime -> Ordering
-compareDate = compare
+compareDate d1 d2 = compare (toUTC d1) (toUTC d2)
 
 -- | Check if first date occurs before a given date
 before :: Datetime -> Datetime -> Bool
@@ -269,7 +295,7 @@ add dt (Delta period duration) =
     dateTimeToDatetime tz $ DateTime (dateAddPeriod d period) tod
   where
     -- Data.Hourglass.DateTime with duration added
-    dt'@(DateTime d tod) = timeAdd (datetimeToDateTime dt) duration
+    (DateTime d tod) = timeAdd (datetimeToDateTime dt) duration
     tz = TimezoneOffset $ zone dt
 
 -- | Subtract a delta from a date (Delta should be positive)
@@ -282,7 +308,7 @@ sub dt (Delta period duration) =
 diff :: Datetime -> Datetime -> Delta
 diff d1' d2' = Delta period duration
   where
-    (d1, d2) = dateTimeToDatetimeAndOrderDateTime d1' d2'
+    (d1, d2) = dateTimeToDatetimeAndOrderDateTime (toUTC d1') (toUTC d2')
 
     period = buildPeriodDiff d1 mempty
     d1PlusPeriod = dateTimeAddPeriod d1 period
@@ -332,7 +358,7 @@ daysBetween :: Datetime -> Datetime -> Delta
 daysBetween d1' d2' =
     Delta (Period 0 0 (abs durDays)) mempty
   where
-    (d1,d2)  = dateTimeToDatetimeAndOrderDateTime d1' d2'
+    (d1,d2)  = dateTimeToDatetimeAndOrderDateTime (toUTC d1') (toUTC d2')
     duration = fst $ fromSeconds $ timeDiff d1 d2
     durDays  = let (Hours hrs) = durationHours duration in fromIntegral hrs `div` 24
 
@@ -404,14 +430,18 @@ dateTimeToDatetimeAndOrderDateTime d1' d2'
     d2 = datetimeToDateTime d2'
 
 minMax :: Ord a => a -> a -> a -> a
-minMax mini maxi = max maxi . min mini
+minMax mini maxi = max mini . min maxi
 
 -------------------------------------------------------------------------------
 -- System Time
 -------------------------------------------------------------------------------
 
--- | Current system time
+-- | Current system time in UTC
 now :: IO Datetime
-now = do
-  tzOffset <- timezoneCurrent
-  dateTimeToDatetime tzOffset <$> dateCurrent
+now = dateTimeToDatetime timezone_UTC <$> dateCurrent
+
+-- | Current system time in Local time
+localNow :: IO Datetime
+localNow = do
+  tz <- timezoneCurrent
+  alterTimezone tz <$> now

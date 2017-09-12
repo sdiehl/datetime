@@ -67,6 +67,13 @@ suite = testGroup "Test Suite"
         "Correct number of UK holidays found"
         (length $ ukHolidays currYear)
         (length ukHolidays')
+
+  , testCase "Manipulating Timezone preserves Datetime Integrity" $ do
+      dtNow <- now
+      let dtNowLocal = alterTimezone (TimezoneOffset (-300)) dtNow
+      let dtNowLocal' = dtNow { hour = (hour dtNow) - 5, zone = (-300) }
+      assertEqual "Manual & Programmatic TZ changes result in the same time"
+        dtNowLocal dtNowLocal'
   ]
 
 main :: IO ()
