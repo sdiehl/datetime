@@ -11,7 +11,7 @@ import Data.Hourglass.Types
 import Datetime
 import Datetime.Types
 
-nyse2017Holidays = map dateTimeToDatetime
+nyse2017Holidays = map (dateTimeToDatetime timezone_UTC)
   [ DateTime (Date 2017 January 2)   (TimeOfDay 0 0 0 0)
   , DateTime (Date 2017 January 16)  (TimeOfDay 0 0 0 0)
   , DateTime (Date 2017 February 20) (TimeOfDay 0 0 0 0)
@@ -23,7 +23,7 @@ nyse2017Holidays = map dateTimeToDatetime
   , DateTime (Date 2017 December 25) (TimeOfDay 0 0 0 0)
   ]
 
-uk2017Holidays = map dateTimeToDatetime
+uk2017Holidays = map (dateTimeToDatetime timezone_UTC)
   [ DateTime (Date 2017 January 2)   (TimeOfDay 0 0 0 0)
   , DateTime (Date 2017 April 14)    (TimeOfDay 0 0 0 0)
   , DateTime (Date 2017 April 17)    (TimeOfDay 0 0 0 0)
@@ -37,7 +37,7 @@ uk2017Holidays = map dateTimeToDatetime
 suite :: TestTree
 suite = testGroup "Test Suite"
   [ testCase "Correctly identifies Holidays" $ do
-      let jan1st2017 = dateTimeToDatetime $
+      let jan1st2017 = dateTimeToDatetime timezone_UTC $
             DateTime (Date 2017 January 1) (TimeOfDay 0 0 0 0)
       let currYear = year jan1st2017
       let yearDts = take 365 $

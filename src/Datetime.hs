@@ -64,6 +64,7 @@ data FixedHoliday = FixedHoliday
   , timezone        :: TimezoneOffset
   } deriving (Show, Eq)
 
+-- | The position of the weekday within the month
 data WeekdayPos
   = First   -- ^ The first occurrence of the weekday
   | Second  -- ^ The second occurrence of the weekday
@@ -164,12 +165,11 @@ matchFixedHoliday :: Datetime -> FixedHoliday -> Bool
 matchFixedHoliday dt (FixedHoliday fday fmonth obs tz) = and
   [ month dt == month shiftedDt
   , day dt   == day shiftedDt
-  -- XXX , match timezone here
   ]
   where
     fixedDate = Date (year dt) fmonth fday
     fixedDT   = DateTime fixedDate $ TimeOfDay 0 0 0 0
-    shiftedDt = observedShift obs $ dateTimeToDatetime fixedDT
+    shiftedDt = observedShift obs $ dateTimeToDatetime timezone_UTC fixedDT
 
 -- | A Datetime matches the Holiday rule iff:
 -- 1) the weekday of the datetime is the same as in the holiday rule
@@ -292,7 +292,7 @@ easterSunday' yr = EasterHoliday datetime
     (_ ,mo,day) = toGregorian $ gregorianEaster $ fromIntegral yr
     month = toEnum $ mo - 1
     dateTime = DateTime (Date yr month day) (TimeOfDay 0 0 0 0)
-    datetime = dateTimeToDatetime dateTime
+    datetime = dateTimeToDatetime timezone_UTC dateTime
 
 -------------------------------------------------------------------------------
 -- Generic Holidays

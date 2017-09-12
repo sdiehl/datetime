@@ -43,6 +43,9 @@ module Datetime.Types (
   datetimeToDateTime,
   posixToDatetime,
 
+  -- ** Timezones -- XXX Explicit sum type
+  TimezoneOffset(..),
+
   -- ** Delta operation
   add,
   sub,
@@ -55,6 +58,9 @@ module Datetime.Types (
   q2,
   q3,
   q4,
+
+  -- ** Time Parse
+  parseDatetime,
 
   -- ** System time
   now,
@@ -162,15 +168,15 @@ data Interval = Interval
 --
 -- This should be the only way to construct a Datetime value, given the use of
 -- the partial toEnum function in the Datetime -> DateTime conversion functions
-dateTimeToDatetime :: DateTime -> Datetime
-dateTimeToDatetime dt = Datetime {
+dateTimeToDatetime :: TimezoneOffset -> DateTime -> Datetime
+dateTimeToDatetime tz dt = Datetime {
     year     = dateYear (dtDate dt)
   , month    = 1 + fromEnum (dateMonth (dtDate dt)) -- human convention starts at 1
   , day      = dateDay (dtDate dt)
   , hour     = fromIntegral $ todHour (dtTime dt)
   , minute   = fromIntegral $ todMin (dtTime dt)
   , second   = fromIntegral $ todSec (dtTime dt)
-  , zone     = 0 -- XXX
+  , zone     = timezoneOffsetToMinutes tz
   , week_day = fromEnum $ getWeekDay (dtDate dt) -- Sunday is 0
   }
 
@@ -195,7 +201,7 @@ datetimeToDateTime dt = DateTime {
       }
 
 posixToDatetime :: Int64 -> Datetime
-posixToDatetime = dateTimeToDatetime . timeFromElapsed . Elapsed . Seconds
+posixToDatetime = dateTimeToDatetime timezone_UTC . timeFromElapsed . Elapsed . Seconds
 
 -------------------------------------------------------------------------------
 -- Delta combinators
@@ -240,7 +246,6 @@ between start end = takeWhile (before end) (from start)
 -- Ordering
 -------------------------------------------------------------------------------
 
--- XXX: this should be correcct, what about timezones
 deriving instance Ord Datetime
 
 compareDate :: Datetime -> Datetime -> Ordering
@@ -261,17 +266,19 @@ after x y  = (compareDate x y) == LT
 -- | Add a delta to a date
 add :: Datetime -> Delta -> Datetime
 add dt (Delta period duration) =
-    dateTimeToDatetime $ DateTime (dateAddPeriod d period) tod
+    dateTimeToDatetime tz $ DateTime (dateAddPeriod d period) tod
   where
     -- Data.Hourglass.DateTime with duration added
     dt'@(DateTime d tod) = timeAdd (datetimeToDateTime dt) duration
+    tz = TimezoneOffset $ zone dt
 
 -- | Subtract a delta from a date (Delta should be positive)
 sub :: Datetime -> Delta -> Datetime
 sub dt (Delta period duration) =
   add dt $ Delta (negatePeriod period) (negateDuration duration)
 
--- | Get the difference between two dates (always positive (?))
+-- | Get the difference between two dates
+-- Warning: this function expects both datetimes to be in the same timezone
 diff :: Datetime -> Datetime -> Delta
 diff d1' d2' = Delta period duration
   where
@@ -332,7 +339,8 @@ daysBetween d1' d2' =
 
 -- | Get the date of the first day in a month of a given year
 fomonth :: Int -> Month -> Datetime
-fomonth y m = dateTimeToDatetime $ DateTime (Date y m 1) (TimeOfDay 0 0 0 0)
+fomonth y m = dateTimeToDatetime timezone_UTC $
+  DateTime (Date y m 1) (TimeOfDay 0 0 0 0)
 
 -- | Get the date of the last day in a month of a given year
 eomonth :: Int -> Month -> Datetime
@@ -342,7 +350,7 @@ eomonth y m = sub foNextMonth $ Delta (Period 0 0 1) mempty
       | fromEnum m == 11 = (y+1, January)
       | otherwise = (y, toEnum $ fromEnum m + 1)
 
-    foNextMonth = dateTimeToDatetime $
+    foNextMonth = dateTimeToDatetime timezone_UTC $
       DateTime (Date year nextMonth 1) (TimeOfDay 0 0 0 0)
 
 -------------------------------------------------------------------------------
@@ -357,6 +365,17 @@ q1 year = Interval (fomonth year January) (eomonth year March)
 q2 year = Interval (fomonth year April) (eomonth year June)
 q3 year = Interval (fomonth year July) (eomonth year September)
 q4 year = Interval (fomonth year January) (eomonth year March)
+
+-------------------------------------------------------------------------------
+-- Datetime Parsing
+-------------------------------------------------------------------------------
+
+parseDatetime :: [Char] -> Maybe Datetime
+parseDatetime timestr = do
+  localTime <- localTimeParse ISO8601_DateAndTime timestr
+  let dateTime = localTimeUnwrap localTime
+  let tzOffset = localTimeGetTimezone localTime
+  pure $ dateTimeToDatetime tzOffset dateTime
 
 -------------------------------------------------------------------------------
 -- Helpers
@@ -390,6 +409,5 @@ minMax mini maxi = max maxi . min mini
 -- | Current system time
 now :: IO Datetime
 now = do
-  TimezoneOffset zone <- timezoneCurrent
-  dt <- dateTimeToDatetime <$> dateCurrent
-  pure (dt { zone = zone })
+  tzOffset <- timezoneCurrent
+  dateTimeToDatetime tzOffset <$> dateCurrent
