@@ -328,7 +328,6 @@ within dt (Interval start stop) =
     endDate   = datetimeToDateTime stop
 
 -- | Get the difference (in days) between two dates
--- XXX Does a `day` mean 24 hours, or whenever midnight is???
 daysBetween :: Datetime -> Datetime -> Delta
 daysBetween d1' d2' =
     Delta (Period 0 0 (abs durDays)) mempty
@@ -370,9 +369,14 @@ q4 year = Interval (fomonth year January) (eomonth year March)
 -- Datetime Parsing
 -------------------------------------------------------------------------------
 
+-- | Parses either an ISO8601 DateAndTime string:
+-- "2014-04-05T17:25:04+00:00" or "2014-04-05T17:25:04Z"
+-- or a Date string: "2014-04-05".
 parseDatetime :: [Char] -> Maybe Datetime
 parseDatetime timestr = do
-  localTime <- localTimeParse ISO8601_DateAndTime timestr
+  localTime <- case localTimeParse ISO8601_DateAndTime timestr of
+    Nothing -> localTimeParse ISO8601_Date timestr
+    Just lt -> Just lt
   let dateTime = localTimeUnwrap localTime
   let tzOffset = localTimeGetTimezone localTime
   pure $ dateTimeToDatetime tzOffset dateTime
