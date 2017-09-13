@@ -392,14 +392,10 @@ q4 year = Interval (fomonth year January) (eomonth year March)
 -- Datetime Parsing
 -------------------------------------------------------------------------------
 
--- | Parses either an ISO8601 DateAndTime string:
--- "2014-04-05T17:25:04+00:00" or "2014-04-05T17:25:04Z"
--- or a Date string: "2014-04-05".
+-- | Parses either an ISO8601 DateAndTime string: "2014-04-05T17:25:04+05:00"
 parseDatetime :: [Char] -> Maybe Datetime
 parseDatetime timestr = do
-  localTime <- case localTimeParse ISO8601_DateAndTime timestr of
-    Nothing -> localTimeParse ISO8601_Date timestr
-    Just lt -> Just lt
+  localTime <- localTimeParse ISO8601_DateAndTime timestr
   let dateTime = localTimeUnwrap localTime
   let tzOffset = localTimeGetTimezone localTime
   pure $ dateTimeToDatetime tzOffset dateTime
