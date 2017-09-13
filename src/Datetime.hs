@@ -231,7 +231,7 @@ nextBusinessDay hgen = go . flip add (days 1)
 
 -- | United Kingdom Bank Holidays
 -- <https://www.gov.uk/bank-holidays>
-ukHolidays :: Int -> [Holiday]
+ukHolidays :: HolidayGen
 ukHolidays year =
   [ christmasDay
   , boxingDay
@@ -260,7 +260,7 @@ lateSummerBank = Rule (HolidayRule August Last Monday)
 
 -- | United States NYSE Stock Exchange Holidays
 -- <https://www.nyse.com/markets/hours-calendars>
-nyseHolidays :: Int -> [Holiday]
+nyseHolidays :: HolidayGen
 nyseHolidays year =
   [ independenceDay
   , christmasDay
