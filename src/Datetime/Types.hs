@@ -10,8 +10,6 @@ module Datetime.Types (
   Datetime(..),
   Delta(..),
 
-  module Time.Types, -- reexport
-
   -- ** Constructors
   secs,
   mins,
@@ -79,7 +77,6 @@ import Control.Monad (fail)
 import GHC.Generics (Generic)
 
 import Time.System (timezoneCurrent, dateCurrent)
-import qualified Time.Types
 
 -------------------------------------------------------------------------------
 -- Types
