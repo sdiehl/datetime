@@ -19,6 +19,7 @@ module Datetime (
   isWeekday,
   isBusiness,
   isHoliday,
+  nextBusinessDay,
 
   -- ** Holiday queries
   isUKHoliday,
@@ -209,6 +210,20 @@ isWeekend = not . isWeekday
 -- | Query if a given date is a business day
 isBusiness :: HolidayGen -> Datetime -> Bool
 isBusiness hs dt = not (isHoliday hs dt) && not (isWeekend dt)
+
+-------------------------------------------------------------------------------
+-- Datetime Manipulation
+-------------------------------------------------------------------------------
+
+-- | Returns a Datetime that is the next business day given a particular
+-- HolidayGen. This function will always move the day forward, i.e. if the
+-- initial Datetime is a business day, it will return the next business day.
+nextBusinessDay :: HolidayGen -> Datetime -> Datetime
+nextBusinessDay hgen = go . flip add (days 1)
+  where
+    go dt -- Add days until isBusiness returns True
+      | isBusiness hgen dt = dt
+      | otherwise = add dt (days 1)
 
 -------------------------------------------------------------------------------
 -- United Kingdom
