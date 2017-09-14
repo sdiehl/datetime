@@ -9,8 +9,7 @@
 module Datetime.Types (
   Datetime(..),
   Delta(..),
-
-  module Time.Types, -- reexport
+  Interval(..),
 
   -- ** Constructors
   secs,
@@ -32,7 +31,7 @@ module Datetime.Types (
   between,
 
   -- ** Validation
-  isValid,
+  validateDatetime,
 
   -- ** End-of-month
   eomonth,
@@ -42,6 +41,11 @@ module Datetime.Types (
   dateTimeToDatetime,
   datetimeToDateTime,
   posixToDatetime,
+
+  -- ** Timezones -- XXX Explicit sum type
+  TimezoneOffset(..),
+  toUTC,
+  alterTimezone,
 
   -- ** Delta operation
   add,
@@ -56,14 +60,17 @@ module Datetime.Types (
   q3,
   q4,
 
+  -- ** Time Parse
+  parseDatetime,
+
   -- ** System time
   now,
 ) where
 
 import Protolude hiding (get, put, second, diff, from)
-import Data.Hourglass
 
 import Data.Aeson
+import Data.Hourglass
 import Data.Monoid ((<>))
 import Data.Serialize
 
@@ -71,7 +78,6 @@ import Control.Monad (fail)
 import GHC.Generics (Generic)
 
 import Time.System (timezoneCurrent, dateCurrent)
-import qualified Time.Types
 
 -------------------------------------------------------------------------------
 -- Types
@@ -86,7 +92,7 @@ data Datetime = Datetime
   , second   :: Int -- ^ The number of seconds since the begining of the minute, between 0 and 59
   , zone     :: Int -- ^ The local zone offset, in minutes of advance wrt UTC.
   , week_day :: Int -- ^ The number of days since sunday, between 0 and 6
-  } deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  } deriving (Show, Eq, Generic, Hashable, ToJSON, FromJSON)
 
 instance Serialize Datetime where
   put Datetime {..} = do
@@ -112,7 +118,7 @@ instance Serialize Datetime where
     zone     <- getInt
     week_day <- getInt
     let dt = Datetime {..}
-    case isValid dt of
+    case validateDatetime dt of
       Left err -> fail err
       Right _  -> pure dt
     where
@@ -120,8 +126,8 @@ instance Serialize Datetime where
       getInt = fmap fromIntegral (get :: Get Int64)
 
 -- | Check whether a date is correctly formed
-isValid :: Datetime -> Either [Char] ()
-isValid (Datetime {..}) = sequence_ [
+validateDatetime :: Datetime -> Either [Char] ()
+validateDatetime (Datetime {..}) = sequence_ [
     cond (year > 0)                       "Year is invalid"
   , cond (year < 3000)                    "Year is not in current millenium"
   , cond (month >= 1 && month <= 12)      "Month range is invalid"
@@ -134,6 +140,16 @@ isValid (Datetime {..}) = sequence_ [
   where
     cond True msg = Right ()
     cond False msg = Left msg
+
+-- | Convert a Datetime to UTC
+toUTC :: Datetime -> Datetime
+toUTC = alterTimezone timezone_UTC
+
+-- | Alter the Datetime timezone using logic from Data.Hourglass
+alterTimezone :: TimezoneOffset -> Datetime -> Datetime
+alterTimezone tz dt' = dateTimeToDatetime tz dt
+  where
+    dt = localTimeUnwrap $ localTime (TimezoneOffset $ zone dt') (datetimeToDateTime dt')
 
 -------------------------------------------------------------------------------
 -- Deltas and Intervals
@@ -162,17 +178,23 @@ data Interval = Interval
 --
 -- This should be the only way to construct a Datetime value, given the use of
 -- the partial toEnum function in the Datetime -> DateTime conversion functions
-dateTimeToDatetime :: DateTime -> Datetime
-dateTimeToDatetime dt = Datetime {
-    year     = dateYear (dtDate dt)
-  , month    = 1 + fromEnum (dateMonth (dtDate dt)) -- human convention starts at 1
-  , day      = dateDay (dtDate dt)
-  , hour     = fromIntegral $ todHour (dtTime dt)
-  , minute   = fromIntegral $ todMin (dtTime dt)
-  , second   = fromIntegral $ todSec (dtTime dt)
-  , zone     = 0 -- XXX
-  , week_day = fromEnum $ getWeekDay (dtDate dt) -- Sunday is 0
-  }
+dateTimeToDatetime :: TimezoneOffset -> DateTime -> Datetime
+dateTimeToDatetime tzo@(TimezoneOffset tzOffset) dt' = datetime
+  where
+    -- Convert DateTime to local time and then unwrap for conversion
+    dt = localTimeUnwrap $ localTimeSetTimezone tzo $ localTimeFromGlobal dt'
+
+    -- Build a Datetime from the localtime adjusted DateTime
+    datetime = Datetime {
+        year     = dateYear (dtDate dt)
+      , month    = 1 + fromEnum (dateMonth (dtDate dt)) -- human convention starts at 1
+      , day      = dateDay (dtDate dt)
+      , hour     = fromIntegral $ todHour (dtTime dt)
+      , minute   = fromIntegral $ todMin (dtTime dt)
+      , second   = fromIntegral $ todSec (dtTime dt)
+      , zone     = tzOffset
+      , week_day = fromEnum $ getWeekDay (dtDate dt) -- Sunday is 0
+      }
 
 -- | Conversion function between Datetime and Data.Hourglass.DateTime
 datetimeToDateTime :: Datetime -> DateTime
@@ -195,7 +217,7 @@ datetimeToDateTime dt = DateTime {
       }
 
 posixToDatetime :: Int64 -> Datetime
-posixToDatetime = dateTimeToDatetime . timeFromElapsed . Elapsed . Seconds
+posixToDatetime = dateTimeToDatetime timezone_UTC . timeFromElapsed . Elapsed . Seconds
 
 -------------------------------------------------------------------------------
 -- Delta combinators
@@ -233,18 +255,25 @@ from :: Datetime -> [Datetime]
 from = iterate (flip add (days 1))
 
 -- | List of days between two points
+-- Warning: Converts second Datetime to same timezone as the start
 between :: Datetime -> Datetime -> [Datetime]
-between start end = takeWhile (before end) (from start)
+between start end = takeWhile (before end { zone = zone start}) (from start)
+
+timezoneOffsetDelta :: TimezoneOffset -> Delta
+timezoneOffsetDelta (TimezoneOffset minutes') =
+    days dys <> hours hrs <> mins minutes
+  where
+    (hrs',minutes) = minutes' `divMod` 60
+    (dys,hrs) = hrs' `divMod` 24
 
 -------------------------------------------------------------------------------
 -- Ordering
 -------------------------------------------------------------------------------
 
--- XXX: this should be correcct, what about timezones
 deriving instance Ord Datetime
 
 compareDate :: Datetime -> Datetime -> Ordering
-compareDate = compare
+compareDate d1 d2 = compare (toUTC d1) (toUTC d2)
 
 -- | Check if first date occurs before a given date
 before :: Datetime -> Datetime -> Bool
@@ -261,21 +290,23 @@ after x y  = (compareDate x y) == LT
 -- | Add a delta to a date
 add :: Datetime -> Delta -> Datetime
 add dt (Delta period duration) =
-    dateTimeToDatetime $ DateTime (dateAddPeriod d period) tod
+    dateTimeToDatetime tz $ DateTime (dateAddPeriod d period) tod
   where
     -- Data.Hourglass.DateTime with duration added
-    dt'@(DateTime d tod) = timeAdd (datetimeToDateTime dt) duration
+    (DateTime d tod) = timeAdd (datetimeToDateTime dt) duration
+    tz = TimezoneOffset $ zone dt
 
 -- | Subtract a delta from a date (Delta should be positive)
 sub :: Datetime -> Delta -> Datetime
 sub dt (Delta period duration) =
   add dt $ Delta (negatePeriod period) (negateDuration duration)
 
--- | Get the difference between two dates (always positive (?))
+-- | Get the difference between two dates
+-- Warning: this function expects both datetimes to be in the same timezone
 diff :: Datetime -> Datetime -> Delta
 diff d1' d2' = Delta period duration
   where
-    (d1, d2) = dateTimeToDatetimeAndOrderDateTime d1' d2'
+    (d1, d2) = dateTimeToDatetimeAndOrderDateTime (toUTC d1') (toUTC d2')
 
     period = buildPeriodDiff d1 mempty
     d1PlusPeriod = dateTimeAddPeriod d1 period
@@ -321,18 +352,18 @@ within dt (Interval start stop) =
     endDate   = datetimeToDateTime stop
 
 -- | Get the difference (in days) between two dates
--- XXX Does a `day` mean 24 hours, or whenever midnight is???
 daysBetween :: Datetime -> Datetime -> Delta
 daysBetween d1' d2' =
     Delta (Period 0 0 (abs durDays)) mempty
   where
-    (d1,d2)  = dateTimeToDatetimeAndOrderDateTime d1' d2'
+    (d1,d2)  = dateTimeToDatetimeAndOrderDateTime (toUTC d1') (toUTC d2')
     duration = fst $ fromSeconds $ timeDiff d1 d2
     durDays  = let (Hours hrs) = durationHours duration in fromIntegral hrs `div` 24
 
 -- | Get the date of the first day in a month of a given year
 fomonth :: Int -> Month -> Datetime
-fomonth y m = dateTimeToDatetime $ DateTime (Date y m 1) (TimeOfDay 0 0 0 0)
+fomonth y m = dateTimeToDatetime timezone_UTC $
+  DateTime (Date y m 1) (TimeOfDay 0 0 0 0)
 
 -- | Get the date of the last day in a month of a given year
 eomonth :: Int -> Month -> Datetime
@@ -342,7 +373,7 @@ eomonth y m = sub foNextMonth $ Delta (Period 0 0 1) mempty
       | fromEnum m == 11 = (y+1, January)
       | otherwise = (y, toEnum $ fromEnum m + 1)
 
-    foNextMonth = dateTimeToDatetime $
+    foNextMonth = dateTimeToDatetime timezone_UTC $
       DateTime (Date year nextMonth 1) (TimeOfDay 0 0 0 0)
 
 -------------------------------------------------------------------------------
@@ -357,6 +388,18 @@ q1 year = Interval (fomonth year January) (eomonth year March)
 q2 year = Interval (fomonth year April) (eomonth year June)
 q3 year = Interval (fomonth year July) (eomonth year September)
 q4 year = Interval (fomonth year January) (eomonth year March)
+
+-------------------------------------------------------------------------------
+-- Datetime Parsing
+-------------------------------------------------------------------------------
+
+-- | Parses either an ISO8601 DateAndTime string: "2014-04-05T17:25:04+05:00"
+parseDatetime :: [Char] -> Maybe Datetime
+parseDatetime timestr = do
+  localTime <- localTimeParse ISO8601_DateAndTime timestr
+  let dateTime = localTimeUnwrap localTime
+  let tzOffset = localTimeGetTimezone localTime
+  pure $ dateTimeToDatetime tzOffset dateTime
 
 -------------------------------------------------------------------------------
 -- Helpers
@@ -381,15 +424,18 @@ dateTimeToDatetimeAndOrderDateTime d1' d2'
     d2 = datetimeToDateTime d2'
 
 minMax :: Ord a => a -> a -> a -> a
-minMax mini maxi = max maxi . min mini
+minMax mini maxi = max mini . min maxi
 
 -------------------------------------------------------------------------------
 -- System Time
 -------------------------------------------------------------------------------
 
--- | Current system time
+-- | Current system time in UTC
 now :: IO Datetime
-now = do
-  TimezoneOffset zone <- timezoneCurrent
-  dt <- dateTimeToDatetime <$> dateCurrent
-  pure (dt { zone = zone })
+now = dateTimeToDatetime timezone_UTC <$> dateCurrent
+
+-- | Current system time in Local time
+localNow :: IO Datetime
+localNow = do
+  tz <- timezoneCurrent
+  alterTimezone tz <$> now

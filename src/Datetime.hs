@@ -19,6 +19,7 @@ module Datetime (
   isWeekday,
   isBusiness,
   isHoliday,
+  nextBusinessDay,
 
   -- ** Holiday queries
   isUKHoliday,
@@ -64,6 +65,7 @@ data FixedHoliday = FixedHoliday
   , timezone        :: TimezoneOffset
   } deriving (Show, Eq)
 
+-- | The position of the weekday within the month
 data WeekdayPos
   = First   -- ^ The first occurrence of the weekday
   | Second  -- ^ The second occurrence of the weekday
@@ -164,12 +166,11 @@ matchFixedHoliday :: Datetime -> FixedHoliday -> Bool
 matchFixedHoliday dt (FixedHoliday fday fmonth obs tz) = and
   [ month dt == month shiftedDt
   , day dt   == day shiftedDt
-  -- XXX , match timezone here
   ]
   where
     fixedDate = Date (year dt) fmonth fday
     fixedDT   = DateTime fixedDate $ TimeOfDay 0 0 0 0
-    shiftedDt = observedShift obs $ dateTimeToDatetime fixedDT
+    shiftedDt = observedShift obs $ dateTimeToDatetime timezone_UTC fixedDT
 
 -- | A Datetime matches the Holiday rule iff:
 -- 1) the weekday of the datetime is the same as in the holiday rule
@@ -211,12 +212,26 @@ isBusiness :: HolidayGen -> Datetime -> Bool
 isBusiness hs dt = not (isHoliday hs dt) && not (isWeekend dt)
 
 -------------------------------------------------------------------------------
+-- Datetime Manipulation
+-------------------------------------------------------------------------------
+
+-- | Returns a Datetime that is the next business day given a particular
+-- HolidayGen. This function will always move the day forward, i.e. if the
+-- initial Datetime is a business day, it will return the next business day.
+nextBusinessDay :: HolidayGen -> Datetime -> Datetime
+nextBusinessDay hgen = go . flip add (days 1)
+  where
+    go dt -- Add days until isBusiness returns True
+      | isBusiness hgen dt = dt
+      | otherwise = add dt (days 1)
+
+-------------------------------------------------------------------------------
 -- United Kingdom
 -------------------------------------------------------------------------------
 
 -- | United Kingdom Bank Holidays
 -- <https://www.gov.uk/bank-holidays>
-ukHolidays :: Int -> [Holiday]
+ukHolidays :: HolidayGen
 ukHolidays year =
   [ christmasDay
   , boxingDay
@@ -245,7 +260,7 @@ lateSummerBank = Rule (HolidayRule August Last Monday)
 
 -- | United States NYSE Stock Exchange Holidays
 -- <https://www.nyse.com/markets/hours-calendars>
-nyseHolidays :: Int -> [Holiday]
+nyseHolidays :: HolidayGen
 nyseHolidays year =
   [ independenceDay
   , christmasDay
@@ -292,7 +307,7 @@ easterSunday' yr = EasterHoliday datetime
     (_ ,mo,day) = toGregorian $ gregorianEaster $ fromIntegral yr
     month = toEnum $ mo - 1
     dateTime = DateTime (Date yr month day) (TimeOfDay 0 0 0 0)
-    datetime = dateTimeToDatetime dateTime
+    datetime = dateTimeToDatetime timezone_UTC dateTime
 
 -------------------------------------------------------------------------------
 -- Generic Holidays
