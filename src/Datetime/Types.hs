@@ -9,6 +9,7 @@
 module Datetime.Types (
   Datetime(..),
   Delta(..),
+  Interval(..),
 
   -- ** Constructors
   secs,
