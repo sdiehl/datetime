@@ -133,8 +133,8 @@ validateDatetime (Datetime {..}) = sequence_ [
   , cond (month >= 1 && month <= 12)      "Month range is invalid"
   , cond (day >= 1 && day <= 31)          "Day range is invalid"
   , cond (hour >= 0 && hour <= 23)        "Hour range is invalid"
-  , cond (minute >= 0 && minute <= 50)    "Minute range is invalid"
-  , cond (second >= 0 && second <= 50)    "Second range is invalid"
+  , cond (minute >= 0 && minute <= 59)    "Minute range is invalid"
+  , cond (second >= 0 && second <= 59)    "Second range is invalid"
   , cond (week_day >= 0 && week_day <= 6) "Week day range is invalid"
   ]
   where
