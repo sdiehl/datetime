@@ -39,6 +39,7 @@ module Datetime.Types (
 
   -- ** Conversion
   dateTimeToDatetime,
+  datetimeToDateTime,
   posixToDatetime,
 
   -- ** Timezones -- XXX Explicit sum type
