@@ -62,6 +62,7 @@ module Datetime.Types (
 
   -- ** Time Parse
   parseDatetime,
+  formatDatetime,
 
   -- ** System time
   now,
@@ -400,6 +401,9 @@ parseDatetime timestr = do
   let dateTime = localTimeUnwrap localTime
   let tzOffset = localTimeGetTimezone localTime
   pure $ dateTimeToDatetime tzOffset dateTime
+
+formatDatetime :: Datetime -> [Char]
+formatDatetime = (timePrint ISO8601_DateAndTime) . datetimeToDateTime
 
 -------------------------------------------------------------------------------
 -- Helpers

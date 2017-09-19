@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
 import Test.Tasty
@@ -7,9 +8,12 @@ import Test.Tasty.QuickCheck
 import Data.List (unfoldr)
 import Data.Hourglass
 import Data.Hourglass.Types
-
 import Datetime
 import Datetime.Types
+
+
+instance Arbitrary Datetime where
+  arbitrary = posixToDatetime <$> choose (1, 32503680000) -- (01/01/1970, 01/01/3000)
 
 nyse2017Holidays = map (dateTimeToDatetime timezone_UTC)
   [ DateTime (Date 2017 January 2)   (TimeOfDay 0 0 0 0)
@@ -55,7 +59,6 @@ suite = testGroup "Test Suite"
         "Correct number of NYSE holidays found"
         (length $ nyseHolidays currYear)
         (length nyseHolidays')
-
       let ukHolidays' = filter isUKHoliday yearDts
 
       assertEqual
@@ -74,6 +77,10 @@ suite = testGroup "Test Suite"
       let dtNowLocal' = dtNow { hour = (hour dtNow) - 5, zone = (-300) }
       assertEqual "Manual & Programmatic TZ changes result in the same time"
         dtNowLocal dtNowLocal'
+
+  , testProperty "ISO 8601: parse . format = id" $ \(dt :: Datetime) ->
+      (parseDatetime $ formatDatetime dt) == (Just dt)
+      
   ]
 
 main :: IO ()
