@@ -2,18 +2,24 @@
 module Main where
 
 import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Tasty.HUnit hiding (assert)
 import Test.Tasty.QuickCheck
+
+import Test.QuickCheck.Monadic
 
 import Data.List (unfoldr)
 import Data.Hourglass
 import Data.Hourglass.Types
+import Data.Monoid ((<>))
 import Datetime
 import Datetime.Types
 
 
 instance Arbitrary Datetime where
   arbitrary = posixToDatetime <$> choose (1, 32503680000) -- (01/01/1970, 01/01/3000)
+
+instance Arbitrary TimezoneOffset where
+  arbitrary = TimezoneOffset <$> choose (-660, 840)
 
 nyse2017Holidays = map (dateTimeToDatetime timezone_UTC)
   [ DateTime (Date 2017 January 2)   (TimeOfDay 0 0 0 0)
@@ -71,19 +77,22 @@ suite = testGroup "Test Suite"
         (length $ ukHolidays currYear)
         (length ukHolidays')
 
-  , testCase "Manipulating Timezone preserves Datetime Integrity" $ do
-      dtNow <- now
-      let dtNowLocal = alterTimezone (TimezoneOffset (-300)) dtNow
-      let dtNowLocal' = dtNow { hour = (hour dtNow) - 5, zone = (-300) }
-      assertEqual "Manual & Programmatic TZ changes result in the same time"
-        dtNowLocal dtNowLocal'
+  , testProperty "Manipulating Timezone preserves Datetime Integrity" $ \tzo ->
+      monadicIO $ do
+        dtNow <- run now
+        let dtNowLocal = alterTimezone tzo dtNow
+        let tzoMins = timezoneOffsetToMinutes tzo
+        let (hrs',mins') = divMod (abs tzoMins) 60
+        let alter = if tzoMins < 0 then sub else add
+        let dtNowLocal' = (dtNow `alter` (hours hrs' <> mins mins')) { zone = tzoMins }
+        assert $ dtNowLocal == dtNowLocal'
 
   , testProperty "ISO 8601: parse . format = id" $ \(dt :: Datetime) ->
       (parseDatetime $ formatDatetime dt) == (Just dt)
 
   , testProperty "dateTimeToDatetime . datetimeToDateTime = id" $ \(dt :: Datetime) ->
       (dateTimeToDatetime timezone_UTC $ datetimeToDateTime dt) == dt
-           
+
   ]
 
 main :: IO ()

@@ -148,9 +148,7 @@ toUTC = alterTimezone timezone_UTC
 
 -- | Alter the Datetime timezone using logic from Data.Hourglass
 alterTimezone :: TimezoneOffset -> Datetime -> Datetime
-alterTimezone tz dt' = dateTimeToDatetime tz dt
-  where
-    dt = localTimeUnwrap $ localTime (TimezoneOffset $ zone dt') (datetimeToDateTime dt')
+alterTimezone tz = dateTimeToDatetime tz . datetimeToDateTime
 
 -------------------------------------------------------------------------------
 -- Deltas and Intervals
@@ -198,12 +196,15 @@ dateTimeToDatetime tzo@(TimezoneOffset tzOffset) dt' = datetime
       }
 
 -- | Conversion function between Datetime and Data.Hourglass.DateTime
--- WARNING: Resulting DateTime value is offset UTC by the timezone, but the specific timezone offset is lost
+-- WARNING: Resulting DateTime value is offset UTC by the timezone,
+-- but data about the specific timezone offset is lost
 datetimeToDateTime :: Datetime -> DateTime
-datetimeToDateTime dt = DateTime {
-      dtDate = dtDate'
-    , dtTime = dtTime'
-    }
+datetimeToDateTime dt =
+    localTimeToGlobal $
+      localTime (TimezoneOffset $ zone dt) $
+        DateTime { dtDate = dtDate'
+                 , dtTime = dtTime'
+                 }
   where
     dtDate' = Date {
         dateYear  = year dt
