@@ -93,7 +93,7 @@ data Datetime = Datetime
   , second   :: Int -- ^ The number of seconds since the begining of the minute, between 0 and 59
   , zone     :: Int -- ^ The local zone offset, in minutes of advance wrt UTC.
   , week_day :: Int -- ^ The number of days since sunday, between 0 and 6
-  } deriving (Show, Eq, Generic, Hashable, ToJSON, FromJSON)
+  } deriving (Show, Eq, Generic, NFData, Hashable, ToJSON, FromJSON)
 
 instance Serialize Datetime where
   put Datetime {..} = do
