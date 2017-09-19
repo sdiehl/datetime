@@ -80,7 +80,10 @@ suite = testGroup "Test Suite"
 
   , testProperty "ISO 8601: parse . format = id" $ \(dt :: Datetime) ->
       (parseDatetime $ formatDatetime dt) == (Just dt)
-      
+
+  , testProperty "dateTimeToDatetime . datetimeToDateTime = id" $ \(dt :: Datetime) ->
+      (dateTimeToDatetime timezone_UTC $ datetimeToDateTime dt) == dt
+           
   ]
 
 main :: IO ()

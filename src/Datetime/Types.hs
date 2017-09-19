@@ -198,6 +198,7 @@ dateTimeToDatetime tzo@(TimezoneOffset tzOffset) dt' = datetime
       }
 
 -- | Conversion function between Datetime and Data.Hourglass.DateTime
+-- WARNING: presumes a UTC timezoned Datetime
 datetimeToDateTime :: Datetime -> DateTime
 datetimeToDateTime dt = DateTime {
       dtDate = dtDate'
