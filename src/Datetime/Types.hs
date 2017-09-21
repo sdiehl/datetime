@@ -273,18 +273,16 @@ timezoneOffsetDelta (TimezoneOffset minutes') =
 -- Ordering
 -------------------------------------------------------------------------------
 
-deriving instance Ord Datetime
-
-compareDate :: Datetime -> Datetime -> Ordering
-compareDate d1 d2 = compare (toUTC d1) (toUTC d2)
+instance Ord Datetime where
+  d1 `compare` d2 = (datetimeToDateTime $ toUTC d1) `compare` (datetimeToDateTime $ toUTC d2)
 
 -- | Check if first date occurs before a given date
 before :: Datetime -> Datetime -> Bool
-before x y = (compareDate x y) == GT
+before = (<)
 
 -- | Check if first date occurs after a given date
 after :: Datetime -> Datetime -> Bool
-after x y  = (compareDate x y) == LT
+after = (>)
 
 -------------------------------------------------------------------------------
 -- Calendar Arithmetic
