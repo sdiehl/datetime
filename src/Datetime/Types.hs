@@ -199,6 +199,21 @@ instance FromJSON Period where
       <*> v .: "periodMonths"
       <*> v .: "periodDays"
 
+instance Serialize Period where
+  put (Period (DH.Period yrs mns dys)) = do
+      putInt yrs
+      putInt mns
+      putInt dys
+    where
+      putInt = putInt64be . fromIntegral
+  get = fmap Period $
+    DH.Period
+      <$> getInt
+      <*> getInt
+      <*> getInt
+    where
+      getInt = fromIntegral <$> getInt64be
+
 newtype Duration = Duration { unDuration :: DH.Duration }
   deriving (Show, Eq, Ord, Generic, NFData)
 
@@ -227,12 +242,26 @@ instance FromJSON Duration where
       <*> (fmap DH.Seconds     $ v .: "durationSeconds")
       <*> (fmap DH.NanoSeconds $ v .: "durationNs")
 
+instance Serialize Duration where
+  put (Duration duration) = do
+    let (DH.Duration (DH.Hours h) (DH.Minutes m) (DH.Seconds s) (DH.NanoSeconds ns)) = duration
+    putInt64be h
+    putInt64be m
+    putInt64be s
+    putInt64be ns
+  get = fmap Duration $
+    DH.Duration
+      <$> (fmap DH.Hours getInt64be)
+      <*> (fmap DH.Minutes getInt64be)
+      <*> (fmap DH.Seconds getInt64be)
+      <*> (fmap DH.NanoSeconds getInt64be)
+
 -- | A time difference represented with Period (y/m/d) + Duration (h/m/s/ns)
 -- where Duration represents the time diff < 24 hours.
 data Delta = Delta
   { dPeriod   :: Period   -- ^ An amount of conceptual calendar time in terms of years, months and days.
   , dDuration :: Duration -- ^ An amount of time measured in hours/mins/secs/nsecs
-  } deriving (Show, Eq, Ord, Generic, NFData, Hashable, ToJSON, FromJSON)
+  } deriving (Show, Eq, Ord, Generic, NFData, Hashable, Serialize, ToJSON, FromJSON)
 
 instance Monoid Delta where
   mempty = Delta mempty mempty
