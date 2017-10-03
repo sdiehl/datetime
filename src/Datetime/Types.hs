@@ -11,6 +11,10 @@ module Datetime.Types (
   Delta(..),
   Period(..),
   Duration(..),
+  DH.Hours(..),
+  DH.Minutes(..),
+  DH.Seconds(..),
+  DH.NanoSeconds(..),
   Interval(..),
 
   -- ** Constructors
