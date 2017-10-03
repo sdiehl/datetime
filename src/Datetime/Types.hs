@@ -9,12 +9,22 @@
 module Datetime.Types (
   Datetime(..),
   Delta(..),
+
   Period(..),
+  DH.periodYears,
+  DH.periodMonths,
+  DH.periodDays,
+
   Duration(..),
+  DH.durationHours,
+  DH.durationMinutes,
+  DH.durationSeconds,
+  DH.durationNs,
   DH.Hours(..),
   DH.Minutes(..),
   DH.Seconds(..),
   DH.NanoSeconds(..),
+
   Interval(..),
 
   -- ** Constructors
