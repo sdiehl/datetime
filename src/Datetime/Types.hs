@@ -9,22 +9,8 @@
 module Datetime.Types (
   Datetime(..),
   Delta(..),
-
   Period(..),
-  DH.periodYears,
-  DH.periodMonths,
-  DH.periodDays,
-
   Duration(..),
-  DH.durationHours,
-  DH.durationMinutes,
-  DH.durationSeconds,
-  DH.durationNs,
-  DH.Hours(..),
-  DH.Minutes(..),
-  DH.Seconds(..),
-  DH.NanoSeconds(..),
-
   Interval(..),
 
   -- ** Constructors
@@ -79,6 +65,8 @@ module Datetime.Types (
   -- ** Time Parse
   parseDatetime,
   formatDatetime,
+
+  displayDelta,
 
   -- ** System time
   now,
@@ -277,6 +265,25 @@ data Delta = Delta
   { dPeriod   :: Period   -- ^ An amount of conceptual calendar time in terms of years, months and days.
   , dDuration :: Duration -- ^ An amount of time measured in hours/mins/secs/nsecs
   } deriving (Show, Eq, Ord, Generic, NFData, Hashable, Serialize, ToJSON, FromJSON)
+
+displayDelta :: Delta -> Text
+displayDelta (Delta (Period (DH.Period y mo dy)) (Duration d)) =
+    year <> month <> day <> hour <> minute <> second
+  where
+    (DH.Duration (DH.Hours h) (DH.Minutes m) (DH.Seconds s) (DH.NanoSeconds ns)) = d
+
+    year  = suffix y  "y"
+    month = suffix mo "mo"
+    day   = suffix dy "d"
+
+    hour   = suffix h "h"
+    minute = suffix m "m"
+    second = suffix s "s"
+
+    suffix :: (Eq a, Num a, Show a) => a -> Text -> Text
+    suffix n s
+      | n == 0 = ""
+      | otherwise = show n <> s
 
 instance Monoid Delta where
   mempty = Delta mempty mempty
