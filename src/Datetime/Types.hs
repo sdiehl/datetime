@@ -9,6 +9,8 @@
 module Datetime.Types (
   Datetime(..),
   Delta(..),
+  Period(..),
+  Duration(..),
   Interval(..),
 
   -- ** Constructors
@@ -70,6 +72,8 @@ module Datetime.Types (
 
 import Protolude hiding (get, put, second, diff, from)
 
+import Control.Monad (fail)
+
 import Data.Aeson
 
 import Data.Hourglass
@@ -94,9 +98,6 @@ import qualified Data.Hourglass as DH
 
 import Data.Monoid ((<>))
 import Data.Serialize
-
-import Control.Monad (fail)
-import GHC.Generics (Generic)
 
 import Time.System (timezoneCurrent, dateCurrent)
 
