@@ -285,16 +285,37 @@ displayDelta (Delta (Period (DH.Period y mo dy)) (Duration d)) =
       | n == 0 = ""
       | otherwise = show n <> s
 
+-- | This function keeps the Duration sub-24 hours, overflowing all extra time
+-- into the Period component. Since the datetime logic is complex, the period
+-- fields `years`, `months`, `days` are not overflowed into each other. For
+-- instance 20y30mo40d is a valid Period, but 25h61m61s is not a valid Duration
+canonicalize :: Delta -> Delta
+canonicalize (Delta (Period p) (Duration d)) =
+    Delta newPeriod newDuration
+  where
+    (DH.Duration dhrs'' dmins'' dsecs' dns) = d
+
+    (dmins',dsecs) = dsecs' `divMod` 60
+    (dhrs',dmins)  = (dmins'' + fromIntegral dmins') `divMod` 60
+    (days',dhrs)   = (dhrs'' + fromIntegral dhrs')  `divMod` 24
+
+    extraPeriod = DH.Period { periodYears = 0, periodMonths = 0, periodDays = fromIntegral days' }
+
+    newPeriod   = Period $ p <> extraPeriod
+    newDuration = Duration $ DH.Duration dhrs dmins dsecs dns
+
 instance Monoid Delta where
   mempty = Delta mempty mempty
   mappend (Delta p1 d1) (Delta p2 d2) =
-    Delta (p1 `mappend` p2) (d1 `mappend` d2)
+    canonicalize $ Delta (p1 `mappend` p2) (d1 `mappend` d2)
 
 -- | A time period between two Datetimes
 data Interval = Interval
   { iStart :: Datetime
   , iStop  :: Datetime
   } deriving (Eq, Show, Generic)
+
+-------------------------------------------------------------------------------
 
 -- | Conversion function between Data.Hourglass.DateTime and Datetime defined in
 -- this module.
@@ -350,20 +371,17 @@ posixToDatetime = dateTimeToDatetime DH.timezone_UTC . DH.timeFromElapsed . DH.E
 -- Delta combinators
 -------------------------------------------------------------------------------
 
--- | Trimmed to 0 - 59
 secs :: Int -> Delta
-secs n = Delta mempty $ Duration $
-  DH.Duration 0 0 (fromIntegral $ minMax 0 59 n) 0
+secs n = canonicalize $
+  Delta mempty $ Duration $ DH.Duration 0 0 (fromIntegral n) 0
 
--- | Trimmed to 0 - 59
 mins :: Int -> Delta
-mins n = Delta mempty $ Duration $
-  DH.Duration 0 (fromIntegral $ minMax 0 59 n) 0 0
+mins n = canonicalize $
+  Delta mempty $ Duration $ DH.Duration 0 (fromIntegral n) 0 0
 
--- | Trimmed to 0 - 23
 hours :: Int -> Delta
-hours n = Delta mempty $ Duration $
-  DH.Duration (fromIntegral $ minMax 0 23 n) 0 0 0
+hours n = canonicalize $
+  Delta mempty $ Duration $ DH.Duration (fromIntegral n) 0 0 0
 
 days :: Int -> Delta
 days n = flip Delta mempty $ Period $
@@ -428,6 +446,10 @@ add dt (Delta (Period period) (Duration duration)) =
 sub :: Datetime -> Delta -> Datetime
 sub dt (Delta period duration) =
   add dt $ Delta (negatePeriod period) (negateDuration duration)
+
+-- | Add two time deltas to get a new time delta
+addDeltas :: Delta -> Delta -> Delta
+addDeltas = (<>)
 
 -- | Get the difference between two dates
 -- Warning: this function expects both datetimes to be in the same timezone
