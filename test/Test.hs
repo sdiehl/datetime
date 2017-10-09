@@ -1,5 +1,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Main where
+
+import Protolude
 
 import Test.Tasty
 import Test.Tasty.HUnit hiding (assert)
@@ -8,8 +13,9 @@ import Test.Tasty.QuickCheck
 import Test.QuickCheck.Monadic
 
 import Data.List (unfoldr)
-import Data.Hourglass
-import Data.Hourglass.Types
+import qualified Data.Hourglass as DH
+import Data.Hourglass.Types as DH
+import qualified Data.Time.Calendar as DC
 import Data.Monoid ((<>))
 import Datetime
 import Datetime.Types
@@ -17,6 +23,24 @@ import Datetime.Types
 
 instance Arbitrary Datetime where
   arbitrary = posixToDatetime <$> choose (1, 32503680000) -- (01/01/1970, 01/01/3000)
+
+instance Arbitrary Period where
+  arbitrary = do
+    year <- choose (0,1000)
+    month <- choose (0,12)
+    let monthNumDays = DC.gregorianMonthLength (fromIntegral year) (fromIntegral month)
+    day <- choose (0,monthNumDays)
+    pure $ Period $ DH.Period year month day
+
+instance Arbitrary Duration where
+  arbitrary = fmap Duration $ DH.Duration
+    <$> (fmap Hours $ choose (0,23))
+    <*> (fmap Minutes $ choose (0,59))
+    <*> (fmap Seconds $ choose (0,59))
+    <*> pure 0
+
+instance Arbitrary Delta where
+  arbitrary = Delta <$> arbitrary <*> arbitrary
 
 instance Arbitrary TimezoneOffset where
   arbitrary = TimezoneOffset <$> choose (-660, 840)
@@ -93,6 +117,47 @@ suite = testGroup "Test Suite"
   , testProperty "dateTimeToDatetime . datetimeToDateTime = id" $ \(dt :: Datetime) ->
       (dateTimeToDatetime timezone_UTC $ datetimeToDateTime dt) == dt
 
+  , testProperty "Deltas are correctly added and canonicalized" $ \(Positive (Small n)) ->
+      let d1  = years 1  <> hours (n*24)
+          d2  = months 2 <> mins (n*60*24)
+          d3  = days 3   <> secs (n*60*60*24)
+      in (d1 <> d2 <> d3) == (years 1 <> months 2 <> days 3 <> days (n*3))
+
+  , testCase "Adding/Subtracting Deltas from Datetimes properly trim invalid month days" $ do
+      -- For adding/subtracting 1 month when month length differs
+      let mar31_2017 = Datetime 2017 3 31 0 0 0 0 5
+      let feb28_2017 = Datetime 2017 2 28 0 0 0 0 2
+      let jan31_2017 = Datetime 2017 1 31 0 0 0 0 2
+
+      -- For adding/subtracting 1 year when year length differs
+      let feb29_2016 = Datetime 2016 2 29 0 0 0 0 1
+      let feb28_2015 = Datetime 2015 2 28 0 0 0 0 6
+      let jan31_2015 = Datetime 2015 1 31 0 0 0 0 6
+
+      assertEqual "Mar 31 2017 - 1mo == Feb 28 2017"
+        (sub mar31_2017 $ months 1) feb28_2017
+      assertEqual "Jan 31 2017 + 1mo == Feb 28 2017"
+        (add jan31_2017 $ months 1) feb28_2017
+
+      assertEqual "Feb 29 2017 - 1yr == Feb 28 2015"
+        (sub feb29_2016 $ years 1) feb28_2015
+      assertEqual "Jan 31 2015 + 1yr1mo == Feb 29 2016"
+        (add jan31_2015 $ years 1 <> months 1) feb29_2016
+
+  , testCase "scaleDelta behaves correctly" $ do
+      let feb23_1999 = Datetime 1999 2 23 23 13 40 5 2
+      let testPeriod = Period (DH.Period 1 1 1)
+      let testDuration = Duration $ DH.Duration (DH.Hours 1) (DH.Minutes 1) (DH.Seconds 1) (DH.NanoSeconds 0)
+      let Just testDelta = scaleDelta 4 $ Delta testPeriod testDuration
+
+      let resPeriod = Period (DH.Period 4 4 4)
+      let resDuration = Duration $ DH.Duration (DH.Hours 4) (DH.Minutes 4) (DH.Seconds 4) (DH.NanoSeconds 0)
+      let resDelta = Delta resPeriod resDuration
+      assertEqual "4 * 1y1mo1d1h1m1s == 4y4mo4d4h4m4s" resDelta testDelta
+
+      let june28_2003 = Datetime 2003 6 28 3 17 44 5 6
+      assertEqual "Feb 23 1999 at 23:23:13 + 4y4mo4d4h4m4s == June 28 2003 3:17:44"
+        (add feb23_1999 testDelta) june28_2003
   ]
 
 main :: IO ()

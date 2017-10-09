@@ -9,6 +9,8 @@
 module Datetime.Types (
   Datetime(..),
   Delta(..),
+  Period(..),
+  Duration(..),
   Interval(..),
 
   -- ** Constructors
@@ -21,6 +23,11 @@ module Datetime.Types (
   months,
   years,
   weeks,
+
+  addDeltas,
+  subDeltas,
+
+  scaleDelta,
 
   -- ** Ordering
   before,
@@ -52,6 +59,7 @@ module Datetime.Types (
   sub,
   diff,
   within,
+  canonicalizeDelta,
 
   -- ** Fiscal Quarters
   fiscalQuarters,
@@ -64,11 +72,15 @@ module Datetime.Types (
   parseDatetime,
   formatDatetime,
 
+  displayDelta,
+
   -- ** System time
   now,
 ) where
 
 import Protolude hiding (get, put, second, diff, from)
+
+import Control.Monad (fail)
 
 import Data.Aeson
 
@@ -91,12 +103,10 @@ import Data.Hourglass
   )
 
 import qualified Data.Hourglass as DH
+import qualified Data.Time.Calendar as DC
 
 import Data.Monoid ((<>))
 import Data.Serialize
-
-import Control.Monad (fail)
-import GHC.Generics (Generic)
 
 import Time.System (timezoneCurrent, dateCurrent)
 
@@ -263,16 +273,56 @@ data Delta = Delta
   , dDuration :: Duration -- ^ An amount of time measured in hours/mins/secs/nsecs
   } deriving (Show, Eq, Ord, Generic, NFData, Hashable, Serialize, ToJSON, FromJSON)
 
+displayDelta :: Delta -> Text
+displayDelta (Delta (Period (DH.Period y mo dy)) (Duration d)) =
+    year <> month <> day <> hour <> minute <> second
+  where
+    (DH.Duration (DH.Hours h) (DH.Minutes m) (DH.Seconds s) (DH.NanoSeconds ns)) = d
+
+    year  = suffix y  "y"
+    month = suffix mo "mo"
+    day   = suffix dy "d"
+
+    hour   = suffix h "h"
+    minute = suffix m "m"
+    second = suffix s "s"
+
+    suffix :: (Eq a, Num a, Show a) => a -> Text -> Text
+    suffix n s
+      | n == 0 = ""
+      | otherwise = show n <> s
+
+-- | This function keeps the Duration sub-24 hours, overflowing all extra time
+-- into the Period component. Since the datetime logic is complex, the period
+-- fields `years`, `months`, `days` are not overflowed into each other. For
+-- instance 20y30mo40d is a valid Period, but 25h61m61s is not a valid Duration
+canonicalizeDelta :: Delta -> Delta
+canonicalizeDelta (Delta (Period p) (Duration d)) =
+    Delta newPeriod newDuration
+  where
+    (DH.Duration dhrs'' dmins'' dsecs' dns) = d
+
+    (dmins',dsecs) = dsecs' `divMod` 60
+    (dhrs',dmins)  = (dmins'' + fromIntegral dmins') `divMod` 60
+    (days',dhrs)   = (dhrs'' + fromIntegral dhrs')  `divMod` 24
+
+    extraPeriod = DH.Period { periodYears = 0, periodMonths = 0, periodDays = fromIntegral days' }
+
+    newPeriod   = Period $ p <> extraPeriod
+    newDuration = Duration $ DH.Duration dhrs dmins dsecs dns
+
 instance Monoid Delta where
   mempty = Delta mempty mempty
   mappend (Delta p1 d1) (Delta p2 d2) =
-    Delta (p1 `mappend` p2) (d1 `mappend` d2)
+    canonicalizeDelta $ Delta (p1 `mappend` p2) (d1 `mappend` d2)
 
 -- | A time period between two Datetimes
 data Interval = Interval
   { iStart :: Datetime
   , iStop  :: Datetime
   } deriving (Eq, Show, Generic)
+
+-------------------------------------------------------------------------------
 
 -- | Conversion function between Data.Hourglass.DateTime and Datetime defined in
 -- this module.
@@ -328,20 +378,17 @@ posixToDatetime = dateTimeToDatetime DH.timezone_UTC . DH.timeFromElapsed . DH.E
 -- Delta combinators
 -------------------------------------------------------------------------------
 
--- | Trimmed to 0 - 59
 secs :: Int -> Delta
-secs n = Delta mempty $ Duration $
-  DH.Duration 0 0 (fromIntegral $ minMax 0 59 n) 0
+secs n = canonicalizeDelta $
+  Delta mempty $ Duration $ DH.Duration 0 0 (fromIntegral n) 0
 
--- | Trimmed to 0 - 59
 mins :: Int -> Delta
-mins n = Delta mempty $ Duration $
-  DH.Duration 0 (fromIntegral $ minMax 0 59 n) 0 0
+mins n = canonicalizeDelta $
+  Delta mempty $ Duration $ DH.Duration 0 (fromIntegral n) 0 0
 
--- | Trimmed to 0 - 23
 hours :: Int -> Delta
-hours n = Delta mempty $ Duration $
-  DH.Duration (fromIntegral $ minMax 0 23 n) 0 0 0
+hours n = canonicalizeDelta $
+  Delta mempty $ Duration $ DH.Duration (fromIntegral n) 0 0 0
 
 days :: Int -> Delta
 days n = flip Delta mempty $ Period $
@@ -374,6 +421,41 @@ timezoneOffsetDelta (TimezoneOffset minutes') =
     (hrs',minutes) = minutes' `divMod` 60
     (dys,hrs) = hrs' `divMod` 24
 
+-- | Add two time deltas to get a new time delta
+addDeltas :: Delta -> Delta -> Delta
+addDeltas d1 = canonicalizeDelta . (<>) d1
+
+-- | Subtract two deltas to get a new time delta
+-- Warning: Time deltas cannot have negative values in fields. Any resulting
+-- negative values will be trimmed to 0.
+subDeltas :: Delta -> Delta -> Delta
+subDeltas d1 d2 = canonicalizeDelta $
+    Delta (Period newPeriod) (Duration newDuration)
+  where
+    (Delta (Period p) (Duration d)) = d1 <> d2
+    (DH.Period pyr pmo pdy) = p
+    (DH.Duration dhr dmin dsec _) = d
+
+    newPeriod = DH.Period (max 0 pyr) (max 0 pmo) (max 0 pdy)
+    newDuration = DH.Duration (max 0 dhr) (max 0 dmin) (max 0 dsec) 0
+
+-- | Scales all fields of a delta by a natural number n
+scaleDelta :: Int -> Delta -> Maybe Delta
+scaleDelta n (Delta (Period p) (Duration d))
+  | n < 1     = Nothing
+  | otherwise = Just $ canonicalizeDelta $
+      Delta (Period newPeriod) (Duration newDuration)
+  where
+    DH.Period py pm pd = p
+    DH.Duration (DH.Hours dh) (DH.Minutes dm) (DH.Seconds ds) _ = d
+
+    newPeriod = DH.Period (n*py) (n*pm) (n*pd)
+    newDuration = DH.Duration
+      (DH.Hours   $ (fromIntegral n) * dh)
+      (DH.Minutes $ (fromIntegral n) * dm)
+      (DH.Seconds $ (fromIntegral n) *ds)
+      (DH.NanoSeconds 0)
+
 -------------------------------------------------------------------------------
 -- Ordering
 -------------------------------------------------------------------------------
@@ -396,7 +478,7 @@ after = (>)
 -- | Add a delta to a date
 add :: Datetime -> Delta -> Datetime
 add dt (Delta (Period period) (Duration duration)) =
-    dateTimeToDatetime tz $ DateTime (DH.dateAddPeriod d period) tod
+    dateTimeToDatetime tz $ DateTime (dateAddPeriod d period) tod
   where
     -- Data.Hourglass.DateTime with duration added
     (DateTime d tod) = DH.timeAdd (datetimeToDateTime dt) duration
@@ -404,8 +486,11 @@ add dt (Delta (Period period) (Duration duration)) =
 
 -- | Subtract a delta from a date (Delta should be positive)
 sub :: Datetime -> Delta -> Datetime
-sub dt (Delta period duration) =
-  add dt $ Delta (negatePeriod period) (negateDuration duration)
+sub dt (Delta (Period period) (Duration duration)) =
+    dateTimeToDatetime tz $ DateTime (dateSubPeriod d period) tod
+  where
+    (DateTime d tod) = DH.timeAdd (datetimeToDateTime dt) (negateDuration duration)
+    tz = TimezoneOffset $ zone dt
 
 -- | Get the difference between two dates
 -- Warning: this function expects both datetimes to be in the same timezone
@@ -519,12 +604,68 @@ formatDatetime = DH.timePrint ISO8601_DateAndTime . datetimeToDateTime
 negatePeriod :: Period -> Period
 negatePeriod (Period (DH.Period y m d)) = Period (DH.Period (-y) (-m) (-d))
 
-negateDuration :: Duration -> Duration
-negateDuration (Duration (DH.Duration h m s ns)) = Duration (DH.Duration (-h) (-m) (-s) (-ns))
+negateDuration :: DH.Duration -> DH.Duration
+negateDuration (DH.Duration h m s ns) = DH.Duration (-h) (-m) (-s) (-ns)
 
 dateTimeAddPeriod :: DateTime -> DH.Period -> DateTime
 dateTimeAddPeriod (DateTime ddate dtime) p =
-  DateTime (DH.dateAddPeriod ddate p) dtime
+  DateTime (dateAddPeriod ddate p) dtime
+
+dateAddPeriod :: Date -> DH.Period -> Date
+dateAddPeriod (Date yOrig mOrig dOrig) (DH.Period yDiff mDiff dDiff) =
+    loop (yOrig + yDiff + yDiffAcc) mStartPos (dOrig+dDiff)
+  where
+    mStartPos' = fromEnum mOrig + mDiff
+    (yDiffAcc', mStartPos) = mStartPos' `divMod` 12
+    yDiffAcc | mStartPos < 0 = yDiffAcc' + 1
+             | otherwise     = yDiffAcc'
+
+    loop y m d
+      | d <= 0 =
+          let (m', y') = if m == 0
+                then (11, y - 1)
+                else (m - 1, y)
+          in loop y' m' (DC.gregorianMonthLength (fromIntegral y') (m' + 1) + d)
+      | d <= dMonth = Date y (toEnum m) d
+      | dDiff == 0 = Date y (toEnum m) dMonth
+      | otherwise  =
+          let newDiff = d - dMonth
+          in if m == 11
+               then loop (y+1) 0 newDiff
+               else loop y (m+1) newDiff
+       where dMonth = DC.gregorianMonthLength (fromIntegral y) (m + 1)
+
+dateSubPeriod :: Date -> DH.Period -> Date
+dateSubPeriod date (DH.Period yDiff mDiff dDiff) =
+    let (Date y m d) = subtractMonths mDiff $ subtractDays dDiff date
+    in fixDate $ Date (y - yDiff) m d
+  where
+    subtractDays d date
+      | d < 0     = panic "Negative days"
+      | d == 0    = date
+      | otherwise = subtractDays (d-1) $
+          date `DH.timeAdd` mempty { DH.durationHours = (-24) }
+
+    subtractMonths m date@(Date year mo day)
+      | m < 0     = panic "Negative months"
+      | m == 0    = date
+      | otherwise =
+          if mo == January
+            then subtractMonths (m-1) $ Date (year - 1) December day
+            else subtractMonths (m-1) $ Date year (toEnum $ fromEnum mo - 1) day
+
+    normalize :: Date -> Date
+    normalize (Date y m d) = Date y m (min lastMonthDay d)
+      where
+        lastMonthDay = DC.gregorianMonthLength (fromIntegral y) (fromEnum m + 1)
+
+-- | Adding/Subtracting Deltas from dates can result in invalid DateTime values.
+-- This function makes sure the resulting day of the month is valid and trims
+-- accordingly.
+fixDate :: Date -> Date
+fixDate (Date yr mo dy) = Date yr mo day
+  where
+    day = min dy $ DC.gregorianMonthLength (fromIntegral yr) (fromEnum mo + 1)
 
 dateTimeToDatetimeAndOrderDateTime :: Datetime -> Datetime -> (DateTime, DateTime)
 dateTimeToDatetimeAndOrderDateTime d1' d2'
