@@ -54,6 +54,7 @@ module Datetime.Types (
   sub,
   diff,
   within,
+  canonicalize,
 
   -- ** Fiscal Quarters
   fiscalQuarters,
@@ -97,6 +98,7 @@ import Data.Hourglass
   )
 
 import qualified Data.Hourglass as DH
+import qualified Data.Time.Calendar as DC
 
 import Data.Monoid ((<>))
 import Data.Serialize
@@ -436,7 +438,7 @@ after = (>)
 -- | Add a delta to a date
 add :: Datetime -> Delta -> Datetime
 add dt (Delta (Period period) (Duration duration)) =
-    dateTimeToDatetime tz $ DateTime (DH.dateAddPeriod d period) tod
+    dateTimeToDatetime tz $ DateTime (dateAddPeriod d period) tod
   where
     -- Data.Hourglass.DateTime with duration added
     (DateTime d tod) = DH.timeAdd (datetimeToDateTime dt) duration
@@ -444,12 +446,28 @@ add dt (Delta (Period period) (Duration duration)) =
 
 -- | Subtract a delta from a date (Delta should be positive)
 sub :: Datetime -> Delta -> Datetime
-sub dt (Delta period duration) =
-  add dt $ Delta (negatePeriod period) (negateDuration duration)
+sub dt (Delta (Period period) (Duration duration)) =
+    dateTimeToDatetime tz $ DateTime (dateSubPeriod d period) tod
+  where
+    (DateTime d tod) = DH.timeAdd (datetimeToDateTime dt) (negateDuration duration)
+    tz = TimezoneOffset $ zone dt
 
 -- | Add two time deltas to get a new time delta
 addDeltas :: Delta -> Delta -> Delta
 addDeltas = (<>)
+
+-- | Subtract two deltas to get a new time delta
+-- Warning: Time deltas cannot have negative values in fields. Any resulting
+-- negative values will be trimmed to 0.
+subDeltas :: Delta -> Delta -> Delta
+subDeltas d1 d2 = Delta (Period newPeriod) (Duration newDuration)
+  where
+    (Delta (Period p) (Duration d)) = d1 <> d2
+    (DH.Period pyr pmo pdy) = p
+    (DH.Duration dhr dmin dsec _) = d
+
+    newPeriod = DH.Period (max 0 pyr) (max 0 pmo) (max 0 pdy)
+    newDuration = DH.Duration (max 0 dhr) (max 0 dmin) (max 0 dsec) 0
 
 -- | Get the difference between two dates
 -- Warning: this function expects both datetimes to be in the same timezone
@@ -563,12 +581,68 @@ formatDatetime = DH.timePrint ISO8601_DateAndTime . datetimeToDateTime
 negatePeriod :: Period -> Period
 negatePeriod (Period (DH.Period y m d)) = Period (DH.Period (-y) (-m) (-d))
 
-negateDuration :: Duration -> Duration
-negateDuration (Duration (DH.Duration h m s ns)) = Duration (DH.Duration (-h) (-m) (-s) (-ns))
+negateDuration :: DH.Duration -> DH.Duration
+negateDuration (DH.Duration h m s ns) = DH.Duration (-h) (-m) (-s) (-ns)
 
 dateTimeAddPeriod :: DateTime -> DH.Period -> DateTime
 dateTimeAddPeriod (DateTime ddate dtime) p =
-  DateTime (DH.dateAddPeriod ddate p) dtime
+  DateTime (dateAddPeriod ddate p) dtime
+
+dateAddPeriod :: Date -> DH.Period -> Date
+dateAddPeriod (Date yOrig mOrig dOrig) (DH.Period yDiff mDiff dDiff) =
+    loop (yOrig + yDiff + yDiffAcc) mStartPos (dOrig+dDiff)
+  where
+    mStartPos' = fromEnum mOrig + mDiff
+    (yDiffAcc', mStartPos) = mStartPos' `divMod` 12
+    yDiffAcc | mStartPos < 0 = yDiffAcc' + 1
+             | otherwise     = yDiffAcc'
+
+    loop y m d
+      | d <= 0 =
+          let (m', y') = if m == 0
+                then (11, y - 1)
+                else (m - 1, y)
+          in loop y' m' (DC.gregorianMonthLength (fromIntegral y') (m' + 1) + d)
+      | d <= dMonth = Date y (toEnum m) d
+      | dDiff == 0 = Date y (toEnum m) dMonth
+      | otherwise  =
+          let newDiff = d - dMonth
+          in if m == 11
+               then loop (y+1) 0 newDiff
+               else loop y (m+1) newDiff
+       where dMonth = DC.gregorianMonthLength (fromIntegral y) (m + 1)
+
+dateSubPeriod :: Date -> DH.Period -> Date
+dateSubPeriod date (DH.Period yDiff mDiff dDiff) =
+    let (Date y m d) = subtractMonths mDiff $ subtractDays dDiff date
+    in fixDate $ Date (y - yDiff) m d
+  where
+    subtractDays d date
+      | d < 0     = panic "Negative days"
+      | d == 0    = date
+      | otherwise = subtractDays (d-1) $
+          date `DH.timeAdd` mempty { DH.durationHours = (-24) }
+
+    subtractMonths m date@(Date year mo day)
+      | m < 0     = panic "Negative months"
+      | m == 0    = date
+      | otherwise =
+          if mo == January
+            then subtractMonths (m-1) $ Date (year - 1) December day
+            else subtractMonths (m-1) $ Date year (toEnum $ fromEnum mo - 1) day
+
+    normalize :: Date -> Date
+    normalize (Date y m d) = Date y m (min lastMonthDay d)
+      where
+        lastMonthDay = DC.gregorianMonthLength (fromIntegral y) (fromEnum m + 1)
+
+-- | Adding/Subtracting Deltas from dates can result in invalid DateTime values.
+-- This function makes sure the resulting day of the month is valid and trims
+-- accordingly.
+fixDate :: Date -> Date
+fixDate (Date yr mo dy) = Date yr mo day
+  where
+    day = min dy $ DC.gregorianMonthLength (fromIntegral yr) (fromEnum mo + 1)
 
 dateTimeToDatetimeAndOrderDateTime :: Datetime -> Datetime -> (DateTime, DateTime)
 dateTimeToDatetimeAndOrderDateTime d1' d2'
