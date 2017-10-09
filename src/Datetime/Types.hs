@@ -24,6 +24,11 @@ module Datetime.Types (
   years,
   weeks,
 
+  addDeltas,
+  subDeltas,
+
+  scaleDelta,
+
   -- ** Ordering
   before,
   after,
@@ -416,6 +421,37 @@ timezoneOffsetDelta (TimezoneOffset minutes') =
     (hrs',minutes) = minutes' `divMod` 60
     (dys,hrs) = hrs' `divMod` 24
 
+-- | Add two time deltas to get a new time delta
+addDeltas :: Delta -> Delta -> Delta
+addDeltas = (<>)
+
+-- | Subtract two deltas to get a new time delta
+-- Warning: Time deltas cannot have negative values in fields. Any resulting
+-- negative values will be trimmed to 0.
+subDeltas :: Delta -> Delta -> Delta
+subDeltas d1 d2 = Delta (Period newPeriod) (Duration newDuration)
+  where
+    (Delta (Period p) (Duration d)) = d1 <> d2
+    (DH.Period pyr pmo pdy) = p
+    (DH.Duration dhr dmin dsec _) = d
+
+    newPeriod = DH.Period (max 0 pyr) (max 0 pmo) (max 0 pdy)
+    newDuration = DH.Duration (max 0 dhr) (max 0 dmin) (max 0 dsec) 0
+
+scaleDelta :: Int -> Delta -> Delta
+scaleDelta n (Delta (Period p) (Duration d)) =
+   Delta (Period newPeriod) (Duration newDuration)
+  where
+    DH.Period py pm pd = p
+    DH.Duration (DH.Hours dh) (DH.Minutes dm) (DH.Seconds ds) _ = d
+
+    newPeriod = DH.Period (n*py) (n*pm) (n*pd)
+    newDuration = DH.Duration
+      (DH.Hours   $ (fromIntegral n) * dh)
+      (DH.Minutes $ (fromIntegral n) * dm)
+      (DH.Seconds $ (fromIntegral n) *ds)
+      (DH.NanoSeconds 0)
+
 -------------------------------------------------------------------------------
 -- Ordering
 -------------------------------------------------------------------------------
@@ -451,23 +487,6 @@ sub dt (Delta (Period period) (Duration duration)) =
   where
     (DateTime d tod) = DH.timeAdd (datetimeToDateTime dt) (negateDuration duration)
     tz = TimezoneOffset $ zone dt
-
--- | Add two time deltas to get a new time delta
-addDeltas :: Delta -> Delta -> Delta
-addDeltas = (<>)
-
--- | Subtract two deltas to get a new time delta
--- Warning: Time deltas cannot have negative values in fields. Any resulting
--- negative values will be trimmed to 0.
-subDeltas :: Delta -> Delta -> Delta
-subDeltas d1 d2 = Delta (Period newPeriod) (Duration newDuration)
-  where
-    (Delta (Period p) (Duration d)) = d1 <> d2
-    (DH.Period pyr pmo pdy) = p
-    (DH.Duration dhr dmin dsec _) = d
-
-    newPeriod = DH.Period (max 0 pyr) (max 0 pmo) (max 0 pdy)
-    newDuration = DH.Duration (max 0 dhr) (max 0 dmin) (max 0 dsec) 0
 
 -- | Get the difference between two dates
 -- Warning: this function expects both datetimes to be in the same timezone

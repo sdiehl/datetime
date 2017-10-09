@@ -144,18 +144,6 @@ suite = testGroup "Test Suite"
       assertEqual "Jan 31 2015 + 1yr1mo == Feb 29 2016"
         (add jan31_2015 $ years 1 <> months 1) feb29_2016
 
-{-
-  , testProperty "Datetime + Delta - Delta == Datetime" $ \(dt, d) ->
-      monadicIO $ do
-        traceM ""
-        traceM $ "Delta:\n\t" <> show d
-        traceM $ "Original Datetime:\n    " <> show dt
-        let added = add dt d
-        traceM $ "Intermediate Datetime:\n    " <> show added
-        let subbed = sub added d
-        traceM $ "Resulting Datetime:\n    " <> show subbed
-        assert $ subbed == dt
--}
   ]
 
 main :: IO ()
