@@ -438,9 +438,12 @@ subDeltas d1 d2 = Delta (Period newPeriod) (Duration newDuration)
     newPeriod = DH.Period (max 0 pyr) (max 0 pmo) (max 0 pdy)
     newDuration = DH.Duration (max 0 dhr) (max 0 dmin) (max 0 dsec) 0
 
-scaleDelta :: Int -> Delta -> Delta
-scaleDelta n (Delta (Period p) (Duration d)) =
-   Delta (Period newPeriod) (Duration newDuration)
+-- | Scales all fields of a delta by a natural number n
+scaleDelta :: Int -> Delta -> Maybe Delta
+scaleDelta n (Delta (Period p) (Duration d))
+  | n < 1     = Nothing
+  | otherwise = Just $
+      Delta (Period newPeriod) (Duration newDuration)
   where
     DH.Period py pm pd = p
     DH.Duration (DH.Hours dh) (DH.Minutes dm) (DH.Seconds ds) _ = d
