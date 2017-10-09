@@ -59,7 +59,7 @@ module Datetime.Types (
   sub,
   diff,
   within,
-  canonicalize,
+  canonicalizeDelta,
 
   -- ** Fiscal Quarters
   fiscalQuarters,
@@ -296,8 +296,8 @@ displayDelta (Delta (Period (DH.Period y mo dy)) (Duration d)) =
 -- into the Period component. Since the datetime logic is complex, the period
 -- fields `years`, `months`, `days` are not overflowed into each other. For
 -- instance 20y30mo40d is a valid Period, but 25h61m61s is not a valid Duration
-canonicalize :: Delta -> Delta
-canonicalize (Delta (Period p) (Duration d)) =
+canonicalizeDelta :: Delta -> Delta
+canonicalizeDelta (Delta (Period p) (Duration d)) =
     Delta newPeriod newDuration
   where
     (DH.Duration dhrs'' dmins'' dsecs' dns) = d
@@ -314,7 +314,7 @@ canonicalize (Delta (Period p) (Duration d)) =
 instance Monoid Delta where
   mempty = Delta mempty mempty
   mappend (Delta p1 d1) (Delta p2 d2) =
-    canonicalize $ Delta (p1 `mappend` p2) (d1 `mappend` d2)
+    canonicalizeDelta $ Delta (p1 `mappend` p2) (d1 `mappend` d2)
 
 -- | A time period between two Datetimes
 data Interval = Interval
@@ -379,15 +379,15 @@ posixToDatetime = dateTimeToDatetime DH.timezone_UTC . DH.timeFromElapsed . DH.E
 -------------------------------------------------------------------------------
 
 secs :: Int -> Delta
-secs n = canonicalize $
+secs n = canonicalizeDelta $
   Delta mempty $ Duration $ DH.Duration 0 0 (fromIntegral n) 0
 
 mins :: Int -> Delta
-mins n = canonicalize $
+mins n = canonicalizeDelta $
   Delta mempty $ Duration $ DH.Duration 0 (fromIntegral n) 0 0
 
 hours :: Int -> Delta
-hours n = canonicalize $
+hours n = canonicalizeDelta $
   Delta mempty $ Duration $ DH.Duration (fromIntegral n) 0 0 0
 
 days :: Int -> Delta
@@ -423,13 +423,14 @@ timezoneOffsetDelta (TimezoneOffset minutes') =
 
 -- | Add two time deltas to get a new time delta
 addDeltas :: Delta -> Delta -> Delta
-addDeltas = (<>)
+addDeltas d1 = canonicalizeDelta . (<>) d1
 
 -- | Subtract two deltas to get a new time delta
 -- Warning: Time deltas cannot have negative values in fields. Any resulting
 -- negative values will be trimmed to 0.
 subDeltas :: Delta -> Delta -> Delta
-subDeltas d1 d2 = Delta (Period newPeriod) (Duration newDuration)
+subDeltas d1 d2 = canonicalizeDelta $
+    Delta (Period newPeriod) (Duration newDuration)
   where
     (Delta (Period p) (Duration d)) = d1 <> d2
     (DH.Period pyr pmo pdy) = p
