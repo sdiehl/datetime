@@ -443,7 +443,7 @@ subDeltas d1 d2 = canonicalizeDelta $
 scaleDelta :: Int -> Delta -> Maybe Delta
 scaleDelta n (Delta (Period p) (Duration d))
   | n < 1     = Nothing
-  | otherwise = Just $
+  | otherwise = Just $ canonicalizeDelta $
       Delta (Period newPeriod) (Duration newDuration)
   where
     DH.Period py pm pd = p
