@@ -429,8 +429,10 @@ addDeltas d1 = canonicalizeDelta . (<>) d1
 -- Warning: Time deltas cannot have negative values in fields. Any resulting
 -- negative values will be trimmed to 0.
 subDeltas :: Delta -> Delta -> Delta
-subDeltas d1 d2 = canonicalizeDelta $
-    Delta (Period newPeriod) (Duration newDuration)
+subDeltas d1 d2
+  | d1 < d2 = Delta mempty mempty
+  | otherwise = canonicalizeDelta $
+      Delta (Period newPeriod) (Duration newDuration)
   where
     (Delta (Period p) (Duration d)) = d1 <> d2
     (DH.Period pyr pmo pdy) = p
