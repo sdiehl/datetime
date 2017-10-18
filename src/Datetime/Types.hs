@@ -271,7 +271,11 @@ instance Serialize Duration where
 data Delta = Delta
   { dPeriod   :: Period   -- ^ An amount of conceptual calendar time in terms of years, months and days.
   , dDuration :: Duration -- ^ An amount of time measured in hours/mins/secs/nsecs
-  } deriving (Show, Eq, Ord, Generic, NFData, Hashable, Serialize, ToJSON, FromJSON)
+  } deriving (Show, Eq, Ord, Generic, NFData, Hashable, ToJSON, FromJSON)
+
+instance Serialize Delta where
+  put (Delta p d) = put p >> put d
+  get = Delta <$> get <*> get
 
 displayDelta :: Delta -> Text
 displayDelta (Delta (Period (DH.Period y mo dy)) (Duration d)) =
