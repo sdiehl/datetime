@@ -13,6 +13,7 @@ import Test.Tasty.QuickCheck
 import Test.QuickCheck.Monadic
 
 import Data.List (unfoldr)
+import qualified Data.Serialize as S
 import qualified Data.Hourglass as DH
 import Data.Hourglass.Types as DH
 import qualified Data.Time.Calendar as DC
@@ -144,7 +145,7 @@ suite = testGroup "Test Suite"
       assertEqual "Jan 31 2015 + 1yr1mo == Feb 29 2016"
         (add jan31_2015 $ years 1 <> months 1) feb29_2016
 
-  , testCase "scaleDelta behaves correctly" $ do
+  , testCase "Function `scaleDelta` behaves correctly" $ do
       let feb23_1999 = Datetime 1999 2 23 23 13 40 5 2
       let testPeriod = Period (DH.Period 1 1 1)
       let testDuration = Duration $ DH.Duration (DH.Hours 1) (DH.Minutes 1) (DH.Seconds 1) (DH.NanoSeconds 0)
@@ -158,6 +159,9 @@ suite = testGroup "Test Suite"
       let june28_2003 = Datetime 2003 6 28 3 17 44 5 6
       assertEqual "Feb 23 1999 at 23:23:13 + 4y4mo4d4h4m4s == June 28 2003 3:17:44"
         (add feb23_1999 testDelta) june28_2003
+
+  , testProperty "decode (encode <Delta>) == <Delta>" $ \(d :: Delta) ->
+      Right d == S.decode (S.encode d)
   ]
 
 main :: IO ()
