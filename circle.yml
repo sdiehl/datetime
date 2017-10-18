@@ -5,7 +5,7 @@ dependencies:
     - wget https://github.com/commercialhaskell/stack/releases/download/v1.4.0/stack-1.4.0-linux-x86_64.tar.gz -O /tmp/stack.tar.gz
     - tar -zxvf /tmp/stack.tar.gz -C /tmp
     - sudo mv /tmp/stack-**/stack /usr/bin/stack
-    - sudo apt-get update -q
+    #- sudo apt-get update -q
 
   override:
     - stack setup --resolver lts-8.13 --no-docker
