@@ -1,4 +1,4 @@
--- This file has been generated from package.yaml by hpack version 0.18.1.
+-- This file has been generated from package.yaml by hpack version 0.19.3.
 --
 -- see: https://github.com/sol/hpack
 
@@ -23,11 +23,11 @@ library
       src
   ghc-options: -fwarn-unused-imports -fwarn-incomplete-patterns -fwarn-incomplete-uni-patterns
   build-depends:
-      base >= 4.7 && < 5
-    , protolude >=0.2
-    , hourglass >=0.2
-    , aeson >=1.1
+      aeson >=1.1
+    , base >=4.7 && <5
     , cereal >=0.5
+    , hourglass >=0.2
+    , protolude >=0.2
     , time >=1.6.0.1
   exposed-modules:
       Datetime
@@ -42,17 +42,17 @@ test-suite matrix-test
   hs-source-dirs:
       test
   build-depends:
-      base >= 4.7 && < 5
-    , protolude >=0.2
-    , hourglass >=0.2
+      QuickCheck
     , aeson >=1.1
+    , base >=4.7
     , cereal >=0.5
-    , time >=1.6.0.1
-    , base >= 4.7
-    , protolude >= 0.2
     , datetimes
-    , QuickCheck
+    , hourglass >=0.2
+    , protolude >=0.2
     , tasty
     , tasty-hunit
     , tasty-quickcheck
+    , time >=1.6.0.1
+  other-modules:
+      Paths_datetimes
   default-language: Haskell2010
