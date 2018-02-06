@@ -8,7 +8,7 @@ dependencies:
     #- sudo apt-get update -q
 
   override:
-    - stack setup --resolver lts-8.13 --no-docker
+    - stack setup --no-docker
     - stack build --fast --no-docker
 
 test:
