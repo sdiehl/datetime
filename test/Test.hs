@@ -14,6 +14,7 @@ import Test.QuickCheck.Monadic
 
 import Data.List (unfoldr)
 import qualified Data.Serialize as S
+import qualified Data.Aeson as A
 import qualified Data.Hourglass as DH
 import Data.Hourglass.Types as DH
 import qualified Data.Time.Calendar as DC
@@ -160,8 +161,10 @@ suite = testGroup "Test Suite"
       assertEqual "Feb 23 1999 at 23:23:13 + 4y4mo4d4h4m4s == June 28 2003 3:17:44"
         (add feb23_1999 testDelta) june28_2003
 
-  , testProperty "decode (encode <Delta>) == <Delta>" $ \(d :: Delta) ->
+  , testProperty "Binary: decode (encode <Delta>) == <Delta>" $ \(d :: Delta) ->
       Right d == S.decode (S.encode d)
+  , testProperty "JSON: decode (encode <Datetime>) == <Datetime>" $ \(d :: Datetime) ->
+      Just d == A.decode (A.encode d)
   ]
 
 main :: IO ()

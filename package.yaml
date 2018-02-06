@@ -1,5 +1,5 @@
 name: datetimes
-version: '0.1.0.0'
+version: '0.1.1.0'
 author: Adjoint Inc
 maintainer: Adjoint Inc (info@adjoint.io)
 license: Apache
@@ -19,7 +19,7 @@ library:
     -fwarn-incomplete-patterns
     -fwarn-incomplete-uni-patterns
   exposed-modules:
-  - Datetime 
+  - Datetime
   - Datetime.Types
 
 tests:

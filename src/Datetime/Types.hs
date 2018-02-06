@@ -123,7 +123,7 @@ data Datetime = Datetime
   , second   :: Int -- ^ The number of seconds since the begining of the minute, between 0 and 59
   , zone     :: Int -- ^ The local zone offset, in minutes of advance wrt UTC.
   , week_day :: Int -- ^ The number of days since sunday, between 0 and 6
-  } deriving (Show, Eq, Generic, NFData, Hashable, ToJSON, FromJSON)
+  } deriving (Show, Eq, Generic, NFData, Hashable)
 
 instance Serialize Datetime where
   put Datetime {..} = do
@@ -155,6 +155,15 @@ instance Serialize Datetime where
     where
       getInt :: Get Int
       getInt = fmap fromIntegral (get :: Get Int64)
+
+instance ToJSON Datetime where
+  toJSON = toJSON . formatDatetime
+
+instance FromJSON Datetime where
+  parseJSON = withText "Datetime" $ \t ->
+    case parseDatetime (toS t) of
+      (Just dt) -> pure dt
+      _ -> fail "could not parse ISO-8601 datetime"
 
 -- | Check whether a date is correctly formed
 validateDatetime :: Datetime -> Either [Char] ()

@@ -2,13 +2,13 @@ dependencies:
   cache_directories:
     - "~/.stack"
   pre:
-    - wget https://github.com/commercialhaskell/stack/releases/download/v1.4.0/stack-1.4.0-linux-x86_64.tar.gz -O /tmp/stack.tar.gz
+    - wget https://github.com/commercialhaskell/stack/releases/download/v1.6.3/stack-1.6.3-linux-x86_64.tar.gz -O /tmp/stack.tar.gz
     - tar -zxvf /tmp/stack.tar.gz -C /tmp
-    - sudo mv /tmp/stack-**/stack /usr/bin/stack
+    - sudo mv /tmp/stack-**/stack /usr/local/bin/stack
     #- sudo apt-get update -q
 
   override:
-    - stack setup --resolver lts-8.13 --no-docker
+    - stack setup --no-docker
     - stack build --fast --no-docker
 
 test:
