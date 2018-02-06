@@ -163,7 +163,7 @@ instance FromJSON Datetime where
   parseJSON = withText "Datetime" $ \t ->
     case parseDatetime (toS t) of
       (Just dt) -> pure dt
-      _ -> fail "could not parse ISO-8601 date"
+      _ -> fail "could not parse ISO-8601 datetime"
 
 -- | Check whether a date is correctly formed
 validateDatetime :: Datetime -> Either [Char] ()
