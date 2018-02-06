@@ -1,9 +1,11 @@
--- This file has been generated from package.yaml by hpack version 0.19.3.
+-- This file has been generated from package.yaml by hpack version 0.20.0.
 --
 -- see: https://github.com/sol/hpack
+--
+-- hash: 44ffd30c5ba42a8cc7a2a5afdbe12aab764f30a72e978082dd6cc0a4b3be4413
 
 name:           datetimes
-version:        0.1.0.0
+version:        0.1.1.0
 category:       Finance
 homepage:       https://github.com/adjoint-io/datetime#readme
 bug-reports:    https://github.com/adjoint-io/datetime/issues
