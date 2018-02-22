@@ -106,7 +106,8 @@ import qualified Data.Hourglass as DH
 import qualified Data.Time.Calendar as DC
 
 import Data.Monoid ((<>))
-import Data.Serialize
+import qualified Data.Binary as B
+import qualified Data.Serialize as S
 
 import Time.System (timezoneCurrent, dateCurrent)
 
@@ -125,7 +126,7 @@ data Datetime = Datetime
   , week_day :: Int -- ^ The number of days since sunday, between 0 and 6
   } deriving (Show, Eq, Generic, NFData, Hashable)
 
-instance Serialize Datetime where
+instance S.Serialize Datetime where
   put Datetime {..} = do
     putInt year
     putInt month
@@ -136,8 +137,8 @@ instance Serialize Datetime where
     putInt zone
     putInt week_day
     where
-      putInt :: Int -> PutM ()
-      putInt i = putInt64be (fromIntegral i :: Int64)
+      putInt :: Int -> S.PutM ()
+      putInt i = S.putInt64be (fromIntegral i :: Int64)
 
   get = do
     year     <- getInt
@@ -153,8 +154,16 @@ instance Serialize Datetime where
       Left err -> fail err
       Right _  -> pure dt
     where
-      getInt :: Get Int
-      getInt = fmap fromIntegral (get :: Get Int64)
+      getInt :: S.Get Int
+      getInt = fmap fromIntegral (S.get :: S.Get Int64)
+
+instance B.Binary Datetime where
+  put = B.put . S.encode
+  get = do
+    edt <- S.decode <$> B.get
+    case edt of
+      Left err -> fail err
+      Right dt -> pure dt
 
 instance ToJSON Datetime where
   toJSON = toJSON . formatDatetime
@@ -218,20 +227,20 @@ instance FromJSON Period where
       <*> v .: "periodMonths"
       <*> v .: "periodDays"
 
-instance Serialize Period where
+instance S.Serialize Period where
   put (Period (DH.Period yrs mns dys)) = do
       putInt yrs
       putInt mns
       putInt dys
     where
-      putInt = putInt64be . fromIntegral
+      putInt = S.putInt64be . fromIntegral
   get = fmap Period $
     DH.Period
       <$> getInt
       <*> getInt
       <*> getInt
     where
-      getInt = fromIntegral <$> getInt64be
+      getInt = fromIntegral <$> S.getInt64be
 
 newtype Duration = Duration { unDuration :: DH.Duration }
   deriving (Show, Eq, Ord, Generic, NFData)
@@ -261,19 +270,19 @@ instance FromJSON Duration where
       <*> (fmap DH.Seconds     $ v .: "durationSeconds")
       <*> (fmap DH.NanoSeconds $ v .: "durationNs")
 
-instance Serialize Duration where
+instance S.Serialize Duration where
   put (Duration duration) = do
     let (DH.Duration (DH.Hours h) (DH.Minutes m) (DH.Seconds s) (DH.NanoSeconds ns)) = duration
-    putInt64be h
-    putInt64be m
-    putInt64be s
-    putInt64be ns
+    S.putInt64be h
+    S.putInt64be m
+    S.putInt64be s
+    S.putInt64be ns
   get = fmap Duration $
     DH.Duration
-      <$> (fmap DH.Hours getInt64be)
-      <*> (fmap DH.Minutes getInt64be)
-      <*> (fmap DH.Seconds getInt64be)
-      <*> (fmap DH.NanoSeconds getInt64be)
+      <$> (fmap DH.Hours S.getInt64be)
+      <*> (fmap DH.Minutes S.getInt64be)
+      <*> (fmap DH.Seconds S.getInt64be)
+      <*> (fmap DH.NanoSeconds S.getInt64be)
 
 -- | A time difference represented with Period (y/m/d) + Duration (h/m/s/ns)
 -- where Duration represents the time diff < 24 hours.
@@ -282,9 +291,17 @@ data Delta = Delta
   , dDuration :: Duration -- ^ An amount of time measured in hours/mins/secs/nsecs
   } deriving (Show, Eq, Ord, Generic, NFData, Hashable, ToJSON, FromJSON)
 
-instance Serialize Delta where
-  put (Delta p d) = put p >> put d
-  get = Delta <$> get <*> get
+instance S.Serialize Delta where
+  put (Delta p d) = S.put p >> S.put d
+  get = Delta <$> S.get <*> S.get
+
+instance B.Binary Delta where
+  put = B.put . S.encode
+  get = do
+    eDelta <- S.decode <$> B.get
+    case eDelta of
+      Left err -> fail err
+      Right d  -> pure d
 
 displayDelta :: Delta -> Text
 displayDelta (Delta (Period (DH.Period y mo dy)) (Duration d)) =

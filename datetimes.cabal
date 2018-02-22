@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 44ffd30c5ba42a8cc7a2a5afdbe12aab764f30a72e978082dd6cc0a4b3be4413
+-- hash: a7c3ee79aa2f5e6a4b998fb42b19d59d9e526991dd4c498fa5772eb7c0493e81
 
 name:           datetimes
 version:        0.1.1.0
@@ -27,6 +27,7 @@ library
   build-depends:
       aeson >=1.1
     , base >=4.7 && <5
+    , binary >=0.8.5.1
     , cereal >=0.5
     , hourglass >=0.2
     , protolude >=0.2
@@ -47,6 +48,7 @@ test-suite matrix-test
       QuickCheck
     , aeson >=1.1
     , base >=4.7
+    , binary >=0.8.5.1
     , cereal >=0.5
     , datetimes
     , hourglass >=0.2
