@@ -1,1 +1,2 @@
-ghcid --command="stack repl datetimes:lib --no-docker" 
+# install ghcid to your stack local project: `stack build ghcid` within this dir
+stack exec ghcid -- --command="stack repl datetimes:lib --no-docker" 
