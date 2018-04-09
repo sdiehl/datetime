@@ -1,7 +1,6 @@
-resolver: lts-10.6
+resolver: lts-11.0
 packages:
 - '.'
 extra-deps:
-- protolude-0.2.1
 flags: {}
 extra-package-dbs: []
