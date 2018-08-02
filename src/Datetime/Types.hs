@@ -205,6 +205,9 @@ alterTimezone tz = dateTimeToDatetime tz . datetimeToDateTime
 newtype Period = Period { unPeriod :: DH.Period }
   deriving (Show, Eq, Ord, Generic, NFData)
 
+instance Semigroup Period where
+  (<>) (Period p1) (Period p2) = Period $ p1 <> p2
+
 instance Monoid Period where
   mempty = Period mempty
   mappend (Period p1) (Period p2) = Period $ mappend p1 p2
@@ -244,6 +247,9 @@ instance S.Serialize Period where
 
 newtype Duration = Duration { unDuration :: DH.Duration }
   deriving (Show, Eq, Ord, Generic, NFData)
+
+instance Semigroup Duration where
+  (<>) (Duration d1) (Duration d2) = Duration $ d1 <> d2
 
 instance Monoid Duration where
   mempty = Duration mempty
@@ -340,6 +346,9 @@ canonicalizeDelta (Delta (Period p) (Duration d)) =
 
     newPeriod   = Period $ p <> extraPeriod
     newDuration = Duration $ DH.Duration dhrs dmins dsecs dns
+
+instance Semigroup Delta where
+  (<>) (Delta d1 p1) (Delta d2 p2) = Delta (d1 <> d2) (p1 <> p2)
 
 instance Monoid Delta where
   mempty = Delta mempty mempty
