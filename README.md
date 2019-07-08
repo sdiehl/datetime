@@ -85,6 +85,6 @@ encoding and binary wire protocol serialization.
 License
 -------
 
-Copyright 2017-2018 Adjoint Inc
+Copyright 2017-2019 Adjoint Inc
 
 Released under Apache 2.0.
