@@ -1,8 +1,10 @@
--- This file has been generated from package.yaml by hpack version 0.28.2.
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 75d458f268962e976bb1b1d0225f40a74c87e910279ae7c2d64da1bbd4db0593
+-- hash: ceecd3ccf227e3609830c25f9d8b458cb73c13c67a3fbba771762efa3f3e9e74
 
 name:           datetimes
 version:        0.1.2.0
@@ -14,7 +16,6 @@ maintainer:     Adjoint Inc (info@adjoint.io)
 license:        Apache
 license-file:   LICENSE
 build-type:     Simple
-cabal-version:  >= 1.10
 
 source-repository head
   type: git
@@ -39,9 +40,11 @@ library
       Paths_datetimes
   default-language: Haskell2010
 
-test-suite matrix-test
+test-suite datetimes-test
   type: exitcode-stdio-1.0
   main-is: Test.hs
+  other-modules:
+      Paths_datetimes
   hs-source-dirs:
       test
   build-depends:
@@ -57,6 +60,4 @@ test-suite matrix-test
     , tasty-hunit
     , tasty-quickcheck
     , time >=1.6.0.1
-  other-modules:
-      Paths_datetimes
   default-language: Haskell2010

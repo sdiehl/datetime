@@ -6,13 +6,14 @@ license: Apache
 github: adjoint-io/datetime
 category: Finance
 dependencies:
-- base >= 4.7 && < 5
-- protolude >=0.2
-- hourglass >=0.2
-- binary >=0.8.5.1
-- aeson >=1.1
-- cereal >=0.5
-- time >=1.6.0.1
+  - base >= 4.7 && < 5
+  - protolude >=0.2
+  - hourglass >=0.2
+  - binary >=0.8.5.1
+  - aeson >=1.1
+  - cereal >=0.5
+  - time >=1.6.0.1
+
 library:
   source-dirs: src
   ghc-options:
@@ -24,7 +25,7 @@ library:
   - Datetime.Types
 
 tests:
-  matrix-test:
+  datetimes-test:
     dependencies:
     - base >= 4.7
     - protolude >= 0.2
