@@ -9,9 +9,12 @@ Datetimes
 
 [![CircleCI](https://circleci.com/gh/adjoint-io/datetime.svg?style=svg&circle-token=dbb93d30a3189d5d3b3c34ca92d25d226bc00fea)](https://circleci.com/gh/adjoint-io/datetime)
 
-A library for financial datetime manipulations.
+A library for financial datetime manipulations and holiday recurrence rules.
 
-Example data structures:
+Usage
+-----
+
+Example usage:
 
 ```haskell
 import Datetime 
@@ -65,7 +68,7 @@ main = do
 ```
 
 The holidays for United Kingdom and United States banking days can be generated
-programatically from recurrence rules:
+programmatically from recurrence rules:
 
 ```haskell
 > ukHolidays 2017
@@ -86,6 +89,6 @@ encoding and binary wire protocol serialization.
 License
 -------
 
-Copyright 2017-2019 Adjoint Inc
+Copyright 2017-2020 Adjoint Inc
 
 Released under Apache 2.0.
